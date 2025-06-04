@@ -52,7 +52,7 @@ func UpdateClaimMetric(res http.ResponseWriter, req *http.Request) {
 }
 
 func parseClaimMetricURL(url string) (metricType string, metricName string, metricValue string, err error) {
-	segments := getUrlSegments(url)
+	segments := getURLSegments(url)
 	if len(segments) < 2 {
 		err = fmt.Errorf(`URL must be /update/{metricType}/{metricName}/{metricValue}`)
 		return
@@ -70,7 +70,7 @@ func parseClaimMetricURL(url string) (metricType string, metricName string, metr
 	return
 }
 
-func getUrlSegments(url string) []string {
+func getURLSegments(url string) []string {
 	segments := make([]string, 0)
 	for _, v := range strings.Split(url, `/`) {
 		if v != "" {
