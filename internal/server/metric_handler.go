@@ -18,7 +18,7 @@ func UpdateClaimMetric(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	metricType, metricName, metricStrValue, err := parseClaimMetricUrl(req.URL.Path)
+	metricType, metricName, metricStrValue, err := parseClaimMetricURL(req.URL.Path)
 	if err != nil {
 		http.Error(res, err.Error(), http.StatusBadRequest)
 		return
@@ -51,7 +51,7 @@ func UpdateClaimMetric(res http.ResponseWriter, req *http.Request) {
 	res.WriteHeader(http.StatusOK)
 }
 
-func parseClaimMetricUrl(url string) (metricType string, metricName string, metricValue string, err error) {
+func parseClaimMetricURL(url string) (metricType string, metricName string, metricValue string, err error) {
 	segments := getUrlSegments(url)
 	if len(segments) < 2 {
 		err = fmt.Errorf(`URL must be /update/{metricType}/{metricName}/{metricValue}`)
