@@ -10,7 +10,7 @@ import (
 	"github.com/Soliard/go-tpl-metrics/models"
 )
 
-var storage store.Storage = store.NewMemStorage()
+var storage store.Storage = store.NewStorage()
 
 func UpdateClaimMetric(res http.ResponseWriter, req *http.Request) {
 	if req.Method != http.MethodPost {

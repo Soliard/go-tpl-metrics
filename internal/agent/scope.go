@@ -65,8 +65,8 @@ func (agent *Agent) reportMetrics() error {
 	return nil
 }
 
-func (agent *Agent) sendMetric(mtype string, mid string, mvalue string) error {
-	url := fmt.Sprintf(`%s/update/%s/%s/%s`, agent.serverHostURL, mtype, mid, mvalue)
+func (agent *Agent) sendMetric(mtype string, id string, value string) error {
+	url := fmt.Sprintf(`%s/update/%s/%s/%s`, agent.serverHostURL, mtype, id, value)
 	fmt.Printf(`send metric url - %s`, url)
 
 	req, err := http.NewRequest(http.MethodPost, url, nil)
@@ -79,6 +79,7 @@ func (agent *Agent) sendMetric(mtype string, mid string, mvalue string) error {
 	if err != nil {
 		return fmt.Errorf(`error while send request with metric: %v`, err)
 	}
+	defer res.Body.Close()
 
 	if res.StatusCode != http.StatusOK {
 		return fmt.Errorf(`metric sending request return not ok status code`)

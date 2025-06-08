@@ -1,8 +1,11 @@
 package main
 
-import "github.com/Soliard/go-tpl-metrics/internal/agent"
+import (
+	"github.com/Soliard/go-tpl-metrics/internal/agent"
+	"github.com/Soliard/go-tpl-metrics/internal/misc"
+)
 
 func main() {
-	agent := agent.NewAgent(`http://localhost:8080`)
+	agent := agent.NewAgent(`http://` + misc.GetServerURL())
 	agent.Run()
 }
