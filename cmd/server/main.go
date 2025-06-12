@@ -14,7 +14,7 @@ func main() {
 	service := server.NewService(storage)
 	metricRouter := server.MetricRouter(service)
 
-	err := http.ListenAndServe(misc.GetServerURL(), metricRouter)
+	err := http.ListenAndServe(misc.DefaultServerHost, metricRouter)
 	if err != nil {
 		panic(err)
 	}

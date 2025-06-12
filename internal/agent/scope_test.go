@@ -12,7 +12,7 @@ import (
 )
 
 func TestNewAgent(t *testing.T) {
-	agent := NewAgent(misc.GetServerURL())
+	agent := NewAgent(misc.DefaultServerHost)
 
 	if agent.collector == nil {
 		t.Error("Expected collector to be initialized")

@@ -21,7 +21,7 @@ func NewAgent(serverHostURL string) *Agent {
 	return &Agent{
 		serverHostURL:  serverHostURL,
 		collector:      NewStatsCollector(),
-		httpClient:     &resty.Client{},
+		httpClient:     resty.New(),
 		pollInterval:   time.Second * 2,
 		reportInterval: time.Second * 10,
 	}

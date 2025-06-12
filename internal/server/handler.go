@@ -53,9 +53,9 @@ func (s *Service) ValueHandler(res http.ResponseWriter, req *http.Request) {
 		if metric.MType == m.MType {
 			dto := models.СonvertToMetricStringDTO(metric)
 			if m.MType == models.Counter {
-				res.Write([]byte(fmt.Sprintf(`%s`, dto.Delta)))
+				res.Write([]byte(dto.Delta))
 			} else if dto.MType == models.Gauge {
-				res.Write([]byte(fmt.Sprintf(`%s`, dto.Value)))
+				res.Write([]byte(dto.Value))
 			}
 		} else {
 			http.Error(res, `invalid metric type`, http.StatusNotFound)

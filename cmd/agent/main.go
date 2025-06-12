@@ -6,6 +6,6 @@ import (
 )
 
 func main() {
-	agent := agent.NewAgent(misc.GetAgentURL())
+	agent := agent.NewAgent(misc.DefaultServerURL)
 	agent.Run()
 }
