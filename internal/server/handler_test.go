@@ -133,6 +133,7 @@ func TestValueHandler(t *testing.T) {
 
 	for _, tt := range updateTests {
 		res, _ := testRequest(t, ts, tt.method, tt.url)
+		defer res.Body.Close()
 		assert.Equal(t, http.StatusOK, res.StatusCode)
 	}
 	// Тестирование получения значений
@@ -175,6 +176,7 @@ func TestValueHandler(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			res, body := testRequest(t, ts, tt.method, tt.url)
+			defer res.Body.Close()
 			assert.Equal(t, tt.expectedCode, res.StatusCode)
 			if tt.expectedCode == http.StatusOK {
 				assert.Equal(t, tt.expectedValue, body)
