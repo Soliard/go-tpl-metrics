@@ -1,6 +1,9 @@
 package models
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 const (
 	Counter = "counter"
@@ -34,20 +37,24 @@ type MetricsPageData struct {
 }
 
 func СonvertToMetricStringDTO(metric Metrics) MetricStringDTO {
+	var delta, value string
+	if metric.Delta != nil {
+		delta = fmt.Sprintf(`%d`, *metric.Delta)
+	} else {
+		delta = ``
+	}
+
+	if metric.Value != nil {
+		value = fmt.Sprintf(`%.3f`, *metric.Value)
+	} else {
+		value = ``
+	}
+	value = strings.TrimRight(value, `0`)
+
 	return MetricStringDTO{
 		ID:    metric.ID,
 		MType: metric.MType,
-		Delta: fmt.Sprintf("%d", func() int64 {
-			if metric.Delta != nil {
-				return *metric.Delta
-			}
-			return 0
-		}()),
-		Value: fmt.Sprintf("%.3f", func() float64 {
-			if metric.Value != nil {
-				return *metric.Value
-			}
-			return 0.0
-		}()),
+		Delta: delta,
+		Value: value,
 	}
 }

@@ -12,10 +12,9 @@ import (
 )
 
 func (s *Service) UpdateHandler(res http.ResponseWriter, req *http.Request) {
-	fmt.Printf("[UpdateHandler] Входящий запрос: %s %s\n", req.Method, req.URL.RawPath)
+	fmt.Printf("[UpdateHandler] Incoming request: %s %s\n", req.Method, req.URL.RawPath)
 	metric := parseMetricURL(req)
-	fmt.Printf("[UpdateHandler] Парсинг метрики: type=%s, name=%s, value=%s\n",
-		metric.MType, metric.ID, metric.Value)
+
 	if metric.ID == "" {
 		http.Error(res, `metric name cannot be empty`, http.StatusNotFound)
 		return
@@ -43,6 +42,7 @@ func (s *Service) UpdateHandler(res http.ResponseWriter, req *http.Request) {
 }
 
 func (s *Service) ValueHandler(res http.ResponseWriter, req *http.Request) {
+	fmt.Printf("[ValueHandler] Incoming request: %s %s\n", req.Method, req.URL.RawPath)
 	m := parseMetricURL(req)
 
 	if m.MType == "" || m.ID == "" {
@@ -94,6 +94,8 @@ func parseMetricURL(req *http.Request) models.MetricStringDTO {
 	metric.MType = chi.URLParam(req, "type")
 	metric.ID = chi.URLParam(req, "name")
 	metric.Value = chi.URLParam(req, "value")
+	fmt.Printf("[parseMetricURL] Parsed metric: type=%s, name=%s, value=%s\n",
+		metric.MType, metric.ID, metric.Value)
 	return metric
 }
 

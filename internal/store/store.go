@@ -36,9 +36,11 @@ func (s *memStorage) UpdateCounter(name string, value int64) error {
 			metric.Delta = new(int64)
 		}
 		*metric.Delta += value
+		fmt.Printf("[storage UpdateCounter] Updated counter metric: %v\n", models.СonvertToMetricStringDTO(metric))
 	} else {
 		newDelta := value
 		s.metrics[name] = models.Metrics{ID: name, MType: models.Counter, Delta: &newDelta}
+		fmt.Printf("[storage UpdateCounter] Created new counter metric: %v\n", models.СonvertToMetricStringDTO(s.metrics[name]))
 	}
 
 	return nil
@@ -53,9 +55,11 @@ func (s *memStorage) UpdateGauge(name string, value float64) error {
 			return fmt.Errorf("metric is not gauge type")
 		}
 		*metric.Value = value
+		fmt.Printf("[storage UpdateGauge] Updated gauge metric: %v\n", models.СonvertToMetricStringDTO(metric))
 	} else {
 		newValue := value
 		s.metrics[name] = models.Metrics{ID: name, MType: models.Gauge, Value: &newValue}
+		fmt.Printf("[storage UpdateGauge] Created new gauge metric: %v\n", models.СonvertToMetricStringDTO(s.metrics[name]))
 	}
 
 	return nil

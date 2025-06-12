@@ -112,6 +112,7 @@ func TestUpdateHandler(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			res, _ := testRequest(t, ts, tt.method, tt.url)
+			defer res.Body.Close()
 			assert.Equal(t, tt.expectedStatus, res.StatusCode)
 		})
 	}
@@ -120,6 +121,66 @@ func TestUpdateHandler(t *testing.T) {
 func TestValueHandler(t *testing.T) {
 	ts, _ := setupTestServer(t)
 	defer ts.Close()
+
+	// Предварительная настройка данных
+	updateTests := []struct {
+		method string
+		url    string
+	}{
+		{http.MethodPost, "/update/gauge/testMetric/123.45"},
+		{http.MethodPost, "/update/counter/testCounter/42"},
+	}
+
+	for _, tt := range updateTests {
+		res, _ := testRequest(t, ts, tt.method, tt.url)
+		assert.Equal(t, http.StatusOK, res.StatusCode)
+	}
+	// Тестирование получения значений
+	tests := []struct {
+		name          string
+		method        string
+		url           string
+		expectedValue string
+		expectedCode  int
+	}{
+		{
+			name:          "get gauge metric",
+			method:        http.MethodGet,
+			url:           "/value/gauge/testMetric",
+			expectedValue: "123.45",
+			expectedCode:  http.StatusOK,
+		},
+		{
+			name:          "get counter metric",
+			method:        http.MethodGet,
+			url:           "/value/counter/testCounter",
+			expectedValue: "42",
+			expectedCode:  http.StatusOK,
+		},
+		{
+			name:          "non-existent metric",
+			method:        http.MethodGet,
+			url:           "/value/gauge/nonExistent",
+			expectedValue: "",
+			expectedCode:  http.StatusNotFound,
+		},
+		{
+			name:          "invalid method",
+			method:        http.MethodPost,
+			url:           "/value/gauge/testMetric",
+			expectedValue: "",
+			expectedCode:  http.StatusMethodNotAllowed,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			res, body := testRequest(t, ts, tt.method, tt.url)
+			assert.Equal(t, tt.expectedCode, res.StatusCode)
+			if tt.expectedCode == http.StatusOK {
+				assert.Equal(t, tt.expectedValue, body)
+			}
+		})
+	}
 
 }
 
