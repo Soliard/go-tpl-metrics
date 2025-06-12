@@ -7,13 +7,13 @@ import (
 
 type StatsCollector struct {
 	Gauges   map[string]float64
-	counters map[string]int64
+	Counters map[string]int64
 }
 
 func NewStatsCollector() *StatsCollector {
 	return &StatsCollector{
 		Gauges:   make(map[string]float64),
-		counters: map[string]int64{},
+		Counters: map[string]int64{},
 	}
 }
 
@@ -50,7 +50,7 @@ func (sc *StatsCollector) Collect() error {
 	sc.Gauges["TotalAlloc"] = float64(m.TotalAlloc)
 	sc.Gauges["RandomValue"] = float64(rand.Float64())
 
-	sc.counters["PollCount"]++
+	sc.Counters["PollCount"]++
 
 	return nil
 }

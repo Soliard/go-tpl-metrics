@@ -6,6 +6,6 @@ import (
 )
 
 func main() {
-	agent := agent.NewAgent(`http://` + misc.GetServerURL())
+	agent := agent.NewAgent(misc.GetAgentURL())
 	agent.Run()
 }

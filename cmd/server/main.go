@@ -5,13 +5,16 @@ import (
 
 	"github.com/Soliard/go-tpl-metrics/internal/misc"
 	"github.com/Soliard/go-tpl-metrics/internal/server"
+	"github.com/Soliard/go-tpl-metrics/internal/store"
 )
 
 func main() {
-	mux := http.NewServeMux()
-	mux.HandleFunc(`/update/`, server.UpdateClaimMetric)
 
-	err := http.ListenAndServe(misc.GetServerURL(), mux)
+	storage := store.NewStorage()
+	service := server.NewService(storage)
+	metricRouter := server.MetricRouter(service)
+
+	err := http.ListenAndServe(misc.GetServerURL(), metricRouter)
 	if err != nil {
 		panic(err)
 	}

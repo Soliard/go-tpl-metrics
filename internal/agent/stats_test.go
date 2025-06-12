@@ -9,7 +9,7 @@ func TestNewStatsCollector(t *testing.T) {
 	if collector.Gauges == nil {
 		t.Error("Gauges map should be initialized")
 	}
-	if collector.counters == nil {
+	if collector.Counters == nil {
 		t.Error("Counters map should be initialized")
 	}
 }
@@ -20,7 +20,7 @@ func TestCollect(t *testing.T) {
 	if len(collector.Gauges) != 0 {
 		t.Error("Gauges should be empty initially")
 	}
-	if collector.counters["PollCount"] != 0 {
+	if collector.Counters["PollCount"] != 0 {
 		t.Error("PollCount should be 0 initially")
 	}
 
@@ -32,7 +32,7 @@ func TestCollect(t *testing.T) {
 	if len(collector.Gauges) == 0 {
 		t.Error("Gauges should not be empty after collection")
 	}
-	if collector.counters["PollCount"] != 1 {
+	if collector.Counters["PollCount"] != 1 {
 		t.Error("PollCount should be 1 after first collection")
 	}
 

@@ -11,57 +11,52 @@ func TestMemStorage(t *testing.T) {
 
 	t.Run("gauge operations", func(t *testing.T) {
 		// Test UpdateGauge
-		storage.UpdateGauge("testGauge", 123.45)
-		value, exists := storage.GetGauge("testGauge")
+		err := storage.UpdateGauge("testGauge", 123.45)
+		assert.NoError(t, err)
+		metric, exists := storage.GetMetric("testGauge")
 		assert.True(t, exists)
-		assert.Equal(t, 123.45, value)
+		assert.Equal(t, 123.45, *metric.Value)
 
 		// Test overwrite
-		storage.UpdateGauge("testGauge", 67.89)
-		value, exists = storage.GetGauge("testGauge")
+		err = storage.UpdateGauge("testGauge", 67.89)
+		assert.NoError(t, err)
+		metric, exists = storage.GetMetric("testGauge")
 		assert.True(t, exists)
-		assert.Equal(t, 67.89, value)
+		assert.Equal(t, 67.89, *metric.Value)
 
 		// Test non-existent gauge
-		_, exists = storage.GetGauge("nonExistent")
+		_, exists = storage.GetMetric("nonExistent")
 		assert.False(t, exists)
 	})
 
 	t.Run("counter operations", func(t *testing.T) {
 		// Test UpdateCounter
-		storage.UpdateCounter("testCounter", 10)
-		value, exists := storage.GetCounter("testCounter")
+		err := storage.UpdateCounter("testCounter", 10)
+		assert.NoError(t, err)
+		metric, exists := storage.GetMetric("testCounter")
 		assert.True(t, exists)
-		assert.Equal(t, int64(10), value)
+		assert.Equal(t, int64(10), *metric.Delta)
 
 		// Test increment
-		storage.UpdateCounter("testCounter", 20)
-		value, exists = storage.GetCounter("testCounter")
+		err = storage.UpdateCounter("testCounter", 20)
+		assert.NoError(t, err)
+		metric, exists = storage.GetMetric("testCounter")
 		assert.True(t, exists)
-		assert.Equal(t, int64(30), value) // 10 + 20
+		assert.Equal(t, int64(30), *metric.Delta) // 10 + 20
 
 		// Test non-existent counter
-		_, exists = storage.GetCounter("nonExistent")
+		_, exists = storage.GetMetric("nonExistent")
 		assert.False(t, exists)
 	})
 
 	t.Run("gauge and counter interaction", func(t *testing.T) {
 		// Test that gauge overwrites counter
-		storage.UpdateCounter("mixed", 100)
-		storage.UpdateGauge("mixed", 200.0)
-		gValue, exists := storage.GetGauge("mixed")
+		err := storage.UpdateCounter("mixed", 100)
+		assert.NoError(t, err)
+		err = storage.UpdateGauge("mixed", 200.0)
+		assert.Error(t, err)
+		metric, exists := storage.GetMetric("mixed")
 		assert.True(t, exists)
-		assert.Equal(t, 200.0, gValue)
-		_, exists = storage.GetCounter("mixed")
-		assert.False(t, exists)
-
-		// Test that counter overwrites gauge
-		storage.UpdateGauge("mixed", 300.0)
-		storage.UpdateCounter("mixed", 400)
-		cValue, exists := storage.GetCounter("mixed")
-		assert.True(t, exists)
-		assert.Equal(t, int64(400), cValue)
-		_, exists = storage.GetGauge("mixed")
-		assert.False(t, exists)
+		assert.Equal(t, int64(100), *metric.Delta)
 	})
 }

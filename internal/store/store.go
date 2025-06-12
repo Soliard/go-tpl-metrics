@@ -1,44 +1,88 @@
 package store
 
+import (
+	"fmt"
+
+	"github.com/Soliard/go-tpl-metrics/models"
+)
+
 type Storage interface {
-	UpdateGauge(name string, value float64)
-	UpdateCounter(name string, value int64)
-	GetGauge(name string) (value float64, exists bool)
-	GetCounter(name string) (value int64, exists bool)
+	UpdateGauge(name string, value float64) error
+	UpdateCounter(name string, value int64) error
+	GetMetric(name string) (metric models.Metrics, exists bool)
+	GetAllMetrics() []models.Metrics
+	GetAllMetricsStringDTO() []models.MetricStringDTO
 }
 
 type memStorage struct {
-	gauges   map[string]float64
-	counters map[string]int64
+	metrics map[string]models.Metrics
 }
 
 func NewStorage() Storage {
 	return &memStorage{
-		gauges:   make(map[string]float64),
-		counters: make(map[string]int64),
+		metrics: map[string]models.Metrics{},
 	}
 }
 
-func (s *memStorage) UpdateGauge(name string, value float64) {
-	delete(s.counters, name)
-	s.gauges[name] = value
-}
-
-func (s *memStorage) UpdateCounter(name string, value int64) {
-	delete(s.gauges, name)
-	if existingValue, exists := s.counters[name]; exists {
-		s.counters[name] = existingValue + value
+func (s *memStorage) UpdateCounter(name string, value int64) error {
+	if name == "" {
+		return fmt.Errorf("metric name cannot be empty")
+	}
+	if metric, exists := s.metrics[name]; exists {
+		if metric.MType != models.Counter {
+			return fmt.Errorf("metric is not counter type")
+		}
+		if metric.Delta == nil {
+			metric.Delta = new(int64)
+		}
+		*metric.Delta += value
 	} else {
-		s.counters[name] = value
+		newDelta := value
+		s.metrics[name] = models.Metrics{ID: name, MType: models.Counter, Delta: &newDelta}
 	}
+
+	return nil
 }
 
-func (s *memStorage) GetGauge(name string) (value float64, exists bool) {
-	val, exists := s.gauges[name]
-	return val, exists
+func (s *memStorage) UpdateGauge(name string, value float64) error {
+	if name == "" {
+		return fmt.Errorf("metric name cannot be empty")
+	}
+	if metric, exists := s.metrics[name]; exists {
+		if metric.MType != models.Gauge {
+			return fmt.Errorf("metric is not gauge type")
+		}
+		*metric.Value = value
+	} else {
+		newValue := value
+		s.metrics[name] = models.Metrics{ID: name, MType: models.Gauge, Value: &newValue}
+	}
+
+	return nil
 }
 
-func (s *memStorage) GetCounter(name string) (value int64, exists bool) {
-	val, exists := s.counters[name]
-	return val, exists
+func (s *memStorage) GetMetric(name string) (metric models.Metrics, exists bool) {
+	val, ok := s.metrics[name]
+	return val, ok
+}
+
+func (s *memStorage) GetAllMetrics() []models.Metrics {
+	metrics := make([]models.Metrics, len(s.metrics))
+	idx := 0
+	for _, m := range s.metrics {
+		metrics[idx] = m
+		idx++
+	}
+
+	return metrics
+}
+
+func (s *memStorage) GetAllMetricsStringDTO() []models.MetricStringDTO {
+	metrics := make([]models.MetricStringDTO, len(s.metrics))
+	idx := 0
+	for _, m := range s.metrics {
+		metrics[idx] = models.СonvertToMetricStringDTO(m)
+		idx++
+	}
+	return metrics
 }

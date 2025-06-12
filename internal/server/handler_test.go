@@ -1,15 +1,41 @@
 package server
 
 import (
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/Soliard/go-tpl-metrics/internal/store"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-func TestUpdateClaimMetric(t *testing.T) {
+func setupTestServer(t *testing.T) (*httptest.Server, *Service) {
+	storage := store.NewStorage()
+	service := NewService(storage)
+	router := MetricRouter(service)
+	return httptest.NewServer(router), service
+}
+
+func testRequest(t *testing.T, ts *httptest.Server, method,
+	path string) (*http.Response, string) {
+	req, err := http.NewRequest(method, ts.URL+path, nil)
+	require.NoError(t, err)
+
+	resp, err := ts.Client().Do(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	respBody, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+
+	return resp, string(respBody)
+}
+
+func TestUpdateHandler(t *testing.T) {
+	ts, _ := setupTestServer(t)
+	defer ts.Close()
 	tests := []struct {
 		name           string
 		method         string
@@ -37,7 +63,7 @@ func TestUpdateClaimMetric(t *testing.T) {
 		{
 			name:           "empty metric name",
 			method:         http.MethodPost,
-			url:            "/update/gauge",
+			url:            "/update/gauge//123.3",
 			expectedStatus: http.StatusNotFound,
 		},
 		{
@@ -65,6 +91,12 @@ func TestUpdateClaimMetric(t *testing.T) {
 			expectedStatus: http.StatusBadRequest,
 		},
 		{
+			name:           "without_id",
+			method:         http.MethodPost,
+			url:            "/update/counter/",
+			expectedStatus: http.StatusNotFound,
+		},
+		{
 			name:           "empty metric type",
 			method:         http.MethodPost,
 			url:            "/update//testMetric/123.45",
@@ -79,76 +111,19 @@ func TestUpdateClaimMetric(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			req := httptest.NewRequest(tt.method, tt.url, nil)
-			w := httptest.NewRecorder()
-
-			UpdateClaimMetric(w, req)
-
-			assert.Equal(t, tt.expectedStatus, w.Code)
+			res, _ := testRequest(t, ts, tt.method, tt.url)
+			assert.Equal(t, tt.expectedStatus, res.StatusCode)
 		})
 	}
 }
 
-// probably shouldnt done those
-func Test_parseClaimMetricURL(t *testing.T) {
-	type want struct {
-		metricType  string
-		metricName  string
-		matricValue string
-	}
-	tests := []struct {
-		name      string
-		url       string
-		want      want
-		wantError bool
-	}{
-		{
-			name:      "valid gauge metric",
-			url:       "/update/gauge/testMetric/123.45",
-			want:      want{metricType: "gauge", metricName: "testMetric", matricValue: "123.45"},
-			wantError: false,
-		},
-		{
-			name:      "valid counter metric",
-			url:       "/update/counter/testCounter/42",
-			want:      want{metricType: "counter", metricName: "testCounter", matricValue: "42"},
-			wantError: false,
-		},
-		{
-			name:      "invalid url format",
-			url:       "/update/invalid",
-			want:      want{metricType: "invalid", metricName: "", matricValue: ""},
-			wantError: false,
-		},
-		{
-			name:      "empty url",
-			url:       "",
-			want:      want{},
-			wantError: true,
-		},
-		{
-			name:      "invalid metric type",
-			url:       "/update/invalid/testMetric/123",
-			want:      want{metricType: "invalid", metricName: "testMetric", matricValue: "123"},
-			wantError: false,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			gotMetricType, gotMetricName, gotMetricValue, err := parseClaimMetricURL(tt.url)
-			if err != nil && !tt.wantError {
-				assert.NoError(t, err)
-			}
-			got := want{metricType: gotMetricType, metricName: gotMetricName, matricValue: gotMetricValue}
-			assert.Equal(t, tt.want, got)
-		})
-	}
+func TestValueHandler(t *testing.T) {
+	ts, _ := setupTestServer(t)
+	defer ts.Close()
+
 }
 
 func Test_updateCounterMetric(t *testing.T) {
-	mockStorage := store.NewStorage()
-	storage = mockStorage
-
 	tests := []struct {
 		name       string
 		metricName string
@@ -188,10 +163,9 @@ func Test_updateCounterMetric(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockStorage = store.NewStorage()
-			storage = mockStorage
+			service := NewService(store.NewStorage())
 
-			err := updateCounterMetric(tt.metricName, tt.value)
+			err := service.updateCounterMetric(tt.metricName, tt.value)
 
 			if tt.wantErr {
 				assert.Error(t, err)
@@ -199,33 +173,29 @@ func Test_updateCounterMetric(t *testing.T) {
 			} else {
 				assert.NoError(t, err)
 				// Проверяем, что значение сохранилось в storage
-				value, exists := mockStorage.GetCounter(tt.metricName)
+				metric, exists := service.GetMetric(tt.metricName)
 				assert.True(t, exists)
-				assert.Equal(t, tt.wantValue, value)
+				assert.Equal(t, tt.wantValue, *metric.Delta)
 			}
 		})
 	}
 }
 
 func Test_updateCounterMetric_Accumulation(t *testing.T) {
-	mockStorage := store.NewStorage()
-	storage = mockStorage
+	s := NewService(store.NewStorage())
 
-	err := updateCounterMetric("testCounter", "10")
+	err := s.updateCounterMetric("testCounter", "10")
 	assert.NoError(t, err)
 
-	err = updateCounterMetric("testCounter", "20")
+	err = s.updateCounterMetric("testCounter", "20")
 	assert.NoError(t, err)
 
-	value, exists := mockStorage.GetCounter("testCounter")
+	metric, exists := s.GetMetric("testCounter")
 	assert.True(t, exists)
-	assert.Equal(t, int64(30), value) // 10 + 20
+	assert.Equal(t, int64(30), *metric.Delta) // 10 + 20
 }
 
 func Test_updateGaugeMetric(t *testing.T) {
-	mockStorage := store.NewStorage()
-	storage = mockStorage
-
 	tests := []struct {
 		name       string
 		metricName string
@@ -265,20 +235,18 @@ func Test_updateGaugeMetric(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockStorage = store.NewStorage()
-			storage = mockStorage
+			s := NewService(store.NewStorage())
 
-			err := updateGaugeMetric(tt.metricName, tt.value)
+			err := s.updateGaugeMetric(tt.metricName, tt.value)
 
 			if tt.wantErr {
 				assert.Error(t, err)
-				assert.Contains(t, err.Error(), "must be a float")
 			} else {
 				assert.NoError(t, err)
 				// Проверяем, что значение сохранилось в storage
-				value, exists := mockStorage.GetGauge(tt.metricName)
+				metric, exists := s.GetMetric(tt.metricName)
 				assert.True(t, exists)
-				assert.Equal(t, tt.wantValue, value)
+				assert.Equal(t, tt.wantValue, *metric.Value)
 			}
 		})
 	}
