@@ -6,13 +6,25 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/Soliard/go-tpl-metrics/internal/misc"
 	"github.com/Soliard/go-tpl-metrics/models"
 	"github.com/stretchr/testify/assert"
 )
 
+func setupTestAgent(serverHost string) *Agent {
+	if serverHost == "" {
+		serverHost = "http://localhost:8080"
+	}
+	config := Config{
+		ServerHost:            serverHost,
+		PollIntervalSeconds:   2,
+		ReportIntervalSeconds: 10,
+	}
+
+	return NewAgent(config)
+}
+
 func TestNewAgent(t *testing.T) {
-	agent := NewAgent(misc.DefaultServerHost)
+	agent := setupTestAgent("")
 
 	if agent.collector == nil {
 		t.Error("Expected collector to be initialized")
@@ -82,7 +94,7 @@ func TestAgent_sendMetric(t *testing.T) {
 			}))
 			defer server.Close()
 
-			agent := NewAgent(server.URL)
+			agent := setupTestAgent(server.URL)
 			err := agent.sendMetric(tt.metricType, tt.metricID, tt.metricValue)
 
 			if tt.wantErr {

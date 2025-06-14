@@ -6,45 +6,33 @@ import (
 	"time"
 
 	"github.com/Soliard/go-tpl-metrics/models"
-	"github.com/go-resty/resty/v2"
 )
 
-type Agent struct {
-	serverHostURL  string
-	collector      *StatsCollector
-	httpClient     *resty.Client
-	pollInterval   time.Duration
-	reportInterval time.Duration
-}
-
-func NewAgent(serverHostURL string) *Agent {
-	return &Agent{
-		serverHostURL:  serverHostURL,
-		collector:      NewStatsCollector(),
-		httpClient:     resty.New(),
-		pollInterval:   time.Second * 2,
-		reportInterval: time.Second * 10,
-	}
-}
-
 func (agent *Agent) Run() {
+	ticker := time.NewTicker(time.Second) // минимальный интервал
+	defer ticker.Stop()
+
+	pollCounter := 0
+	reportCounter := 0
+
 	for {
-		if err := agent.collector.Collect(); err != nil {
-			fmt.Println(`Error while collection metrics:`, err)
-		}
+		<-ticker.C
+		pollCounter++
+		reportCounter++
 
-		polCount, ok := agent.collector.Counters["PollCount"]
-		if ok {
-			if polCount%5 == 0 {
-				if err := agent.reportMetrics(); err != nil {
-					fmt.Println(`error while reporting metrics:`, err)
-				}
+		if pollCounter >= int(agent.pollInterval.Seconds()) {
+			if err := agent.collector.Collect(); err != nil {
+				fmt.Println(`Error while collection metrics:`, err)
 			}
-		} else {
-			fmt.Println(`cannot get pol count from counter metrics`)
+			pollCounter = 0
 		}
 
-		time.Sleep(agent.pollInterval)
+		if reportCounter >= int(agent.reportInterval.Seconds()) {
+			if err := agent.reportMetrics(); err != nil {
+				fmt.Println(`error while reporting metrics:`, err)
+			}
+			reportCounter = 0
+		}
 	}
 }
 
@@ -62,6 +50,8 @@ func (agent *Agent) reportMetrics() error {
 			return err
 		}
 	}
+
+	fmt.Println("Metrics reported to the server")
 
 	return nil
 }

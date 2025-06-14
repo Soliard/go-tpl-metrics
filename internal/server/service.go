@@ -6,12 +6,18 @@ import (
 )
 
 type Service struct {
-	storage store.Storage
+	ServerHost string
+	storage    store.Storage
 }
 
-func NewService(storage store.Storage) *Service {
+type Config struct {
+	ServerHost string
+}
+
+func NewService(storage store.Storage, config Config) *Service {
 	return &Service{
-		storage: storage,
+		storage:    storage,
+		ServerHost: config.ServerHost,
 	}
 }
 

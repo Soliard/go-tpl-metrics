@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"fmt"
 	"math/rand"
 	"runtime"
 )
@@ -51,6 +52,8 @@ func (sc *StatsCollector) Collect() error {
 	sc.Gauges["RandomValue"] = float64(rand.Float64())
 
 	sc.Counters["PollCount"]++
+
+	fmt.Println("Stats collected")
 
 	return nil
 }

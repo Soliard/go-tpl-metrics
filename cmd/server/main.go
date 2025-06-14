@@ -1,9 +1,9 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
 
-	"github.com/Soliard/go-tpl-metrics/internal/misc"
 	"github.com/Soliard/go-tpl-metrics/internal/server"
 	"github.com/Soliard/go-tpl-metrics/internal/store"
 )
@@ -11,10 +11,12 @@ import (
 func main() {
 
 	storage := store.NewStorage()
-	service := server.NewService(storage)
+	config := ParseFlags()
+	service := server.NewService(storage, config)
 	metricRouter := server.MetricRouter(service)
 
-	err := http.ListenAndServe(misc.DefaultServerHost, metricRouter)
+	fmt.Println("service Listen And Serve on ", service.ServerHost)
+	err := http.ListenAndServe(service.ServerHost, metricRouter)
 	if err != nil {
 		panic(err)
 	}

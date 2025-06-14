@@ -13,7 +13,8 @@ import (
 
 func setupTestServer(t *testing.T) (*httptest.Server, *Service) {
 	storage := store.NewStorage()
-	service := NewService(storage)
+	config := Config{ServerHost: "localhost:8080"}
+	service := NewService(storage, config)
 	router := MetricRouter(service)
 	return httptest.NewServer(router), service
 }
@@ -226,7 +227,7 @@ func Test_updateCounterMetric(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			service := NewService(store.NewStorage())
+			_, service := setupTestServer(t)
 
 			err := service.updateCounterMetric(tt.metricName, tt.value)
 
@@ -245,7 +246,7 @@ func Test_updateCounterMetric(t *testing.T) {
 }
 
 func Test_updateCounterMetric_Accumulation(t *testing.T) {
-	s := NewService(store.NewStorage())
+	_, s := setupTestServer(t)
 
 	err := s.updateCounterMetric("testCounter", "10")
 	assert.NoError(t, err)
@@ -298,7 +299,7 @@ func Test_updateGaugeMetric(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := NewService(store.NewStorage())
+			_, s := setupTestServer(t)
 
 			err := s.updateGaugeMetric(tt.metricName, tt.value)
 
