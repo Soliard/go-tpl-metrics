@@ -15,9 +15,9 @@ func setupTestAgent(serverHost string) *Agent {
 		serverHost = "http://localhost:8080"
 	}
 	config := Config{
-		ServerHost:     serverHost,
-		PollInterval:   2,
-		ReportInterval: 10,
+		ServerHost:            serverHost,
+		PollIntervalSeconds:   2,
+		ReportIntervalSeconds: 10,
 	}
 
 	return NewAgent(config)

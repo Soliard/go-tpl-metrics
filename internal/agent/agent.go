@@ -16,9 +16,9 @@ type Agent struct {
 }
 
 type Config struct {
-	ServerHost     string        `env:"ADDRESS"`
-	PollInterval   time.Duration `env:"POLL_INTERVAL"`
-	ReportInterval time.Duration `env:"REPORT_INTERVAL"`
+	ServerHost            string `env:"ADDRESS"`
+	PollIntervalSeconds   int    `env:"POLL_INTERVAL"`
+	ReportIntervalSeconds int    `env:"REPORT_INTERVAL"`
 }
 
 func NewAgent(config Config) *Agent {
@@ -26,8 +26,8 @@ func NewAgent(config Config) *Agent {
 		serverHostURL:  normalizeServerURL(config.ServerHost),
 		collector:      NewStatsCollector(),
 		httpClient:     resty.New(),
-		pollInterval:   config.PollInterval,
-		reportInterval: config.ReportInterval,
+		pollInterval:   time.Duration(config.PollIntervalSeconds),
+		reportInterval: time.Duration(config.ReportIntervalSeconds),
 	}
 }
 

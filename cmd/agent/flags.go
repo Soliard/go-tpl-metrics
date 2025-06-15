@@ -3,9 +3,9 @@ package main
 import (
 	"flag"
 	"fmt"
-	"time"
 
 	"github.com/Soliard/go-tpl-metrics/internal/agent"
+	"github.com/Soliard/go-tpl-metrics/internal/logger"
 	"github.com/caarlos0/env/v6"
 )
 
@@ -13,18 +13,17 @@ func ParseFlags() agent.Config {
 	config := agent.Config{}
 
 	flag.StringVar(&config.ServerHost, "a", "localhost:8080", "server addres")
-	flag.DurationVar(&config.PollInterval, "p", 2*time.Second, "metrics poll interval is seconds")
-	flag.DurationVar(&config.ReportInterval, "r", 10*time.Second, "metrics send interval in seconds")
+	flag.IntVar(&config.PollIntervalSeconds, "p", 2, "metrics poll interval is seconds")
+	flag.IntVar(&config.ReportIntervalSeconds, "r", 10, "metrics send interval in seconds")
 	flag.Parse()
 
-	fmt.Println(`agent parsed flags config: `, config)
+	logger.LogConfig("agent", config)
 
 	err := env.Parse(&config)
 	if err != nil {
-		fmt.Println(`cannot parse config from env for agent`)
+		logger.LogError("agent", fmt.Errorf("cannot parse config from env: %w", err))
 	}
 
-	fmt.Println(`agent after env config: `, config)
-
+	logger.LogConfig("agent", config)
 	return config
 }
