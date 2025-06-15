@@ -3,6 +3,8 @@ module github.com/Soliard/go-tpl-metrics
 go 1.24.3
 
 require (
+	github.com/caarlos0/env v3.5.0+incompatible // indirect
+	github.com/caarlos0/env/v6 v6.10.1 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/go-chi/chi/v5 v5.2.1 // indirect
 	github.com/go-resty/resty/v2 v2.16.5 // indirect

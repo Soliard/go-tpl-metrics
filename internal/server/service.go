@@ -11,7 +11,7 @@ type Service struct {
 }
 
 type Config struct {
-	ServerHost string
+	ServerHost string `env:"ADDRESS"`
 }
 
 func NewService(storage store.Storage, config Config) *Service {
