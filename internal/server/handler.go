@@ -51,7 +51,7 @@ func (s *Service) ValueHandler(res http.ResponseWriter, req *http.Request) {
 	}
 	if metric, exists := s.GetMetric(m.ID); exists {
 		if metric.MType == m.MType {
-			dto := models.СonvertToMetricStringDTO(metric)
+			dto := models.СonvertToMetricStringDTO(*metric)
 			if m.MType == models.Counter {
 				res.Write([]byte(dto.Delta))
 			} else if dto.MType == models.Gauge {

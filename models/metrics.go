@@ -33,10 +33,10 @@ type MetricStringDTO struct {
 }
 
 type MetricsPageData struct {
-	Metrics []MetricStringDTO
+	Metrics []*MetricStringDTO
 }
 
-func СonvertToMetricStringDTO(metric Metrics) MetricStringDTO {
+func СonvertToMetricStringDTO(metric Metrics) *MetricStringDTO {
 	var delta, value string
 	if metric.Delta != nil {
 		delta = fmt.Sprintf(`%d`, *metric.Delta)
@@ -51,7 +51,7 @@ func СonvertToMetricStringDTO(metric Metrics) MetricStringDTO {
 	}
 	value = strings.TrimRight(value, `0`)
 
-	return MetricStringDTO{
+	return &MetricStringDTO{
 		ID:    metric.ID,
 		MType: metric.MType,
 		Delta: delta,

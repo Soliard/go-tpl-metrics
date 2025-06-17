@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/Soliard/go-tpl-metrics/cmd/server/config"
 	"github.com/Soliard/go-tpl-metrics/internal/logger"
 	"github.com/Soliard/go-tpl-metrics/internal/server"
 	"github.com/Soliard/go-tpl-metrics/internal/store"
@@ -17,7 +18,7 @@ func main() {
 	logger.LogInfo("server", "Starting server...")
 
 	storage := store.NewStorage()
-	config := ParseFlags()
+	config := config.New()
 	logger.LogConfig("server", config)
 
 	service := server.NewService(storage, config)

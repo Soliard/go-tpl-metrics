@@ -2,6 +2,7 @@ package store
 
 import (
 	"fmt"
+	"sort"
 
 	"github.com/Soliard/go-tpl-metrics/models"
 )
@@ -9,9 +10,9 @@ import (
 type Storage interface {
 	UpdateGauge(name string, value float64) error
 	UpdateCounter(name string, value int64) error
-	GetMetric(name string) (metric models.Metrics, exists bool)
+	GetMetric(name string) (metric *models.Metrics, exists bool)
 	GetAllMetrics() []models.Metrics
-	GetAllMetricsStringDTO() []models.MetricStringDTO
+	GetAllMetricsStringDTO() []*models.MetricStringDTO
 }
 
 type memStorage struct {
@@ -65,9 +66,9 @@ func (s *memStorage) UpdateGauge(name string, value float64) error {
 	return nil
 }
 
-func (s *memStorage) GetMetric(name string) (metric models.Metrics, exists bool) {
+func (s *memStorage) GetMetric(name string) (metric *models.Metrics, exists bool) {
 	val, ok := s.metrics[name]
-	return val, ok
+	return &val, ok
 }
 
 func (s *memStorage) GetAllMetrics() []models.Metrics {
@@ -81,12 +82,13 @@ func (s *memStorage) GetAllMetrics() []models.Metrics {
 	return metrics
 }
 
-func (s *memStorage) GetAllMetricsStringDTO() []models.MetricStringDTO {
-	metrics := make([]models.MetricStringDTO, len(s.metrics))
-	idx := 0
+func (s *memStorage) GetAllMetricsStringDTO() []*models.MetricStringDTO {
+	metrics := make([]*models.MetricStringDTO, 0, len(s.metrics))
 	for _, m := range s.metrics {
-		metrics[idx] = models.СonvertToMetricStringDTO(m)
-		idx++
+		metrics = append(metrics, models.СonvertToMetricStringDTO(m))
 	}
+	sort.Slice(metrics, func(i, j int) bool {
+		return metrics[i].ID < metrics[j].ID
+	})
 	return metrics
 }

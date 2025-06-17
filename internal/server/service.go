@@ -1,6 +1,7 @@
 package server
 
 import (
+	"github.com/Soliard/go-tpl-metrics/cmd/server/config"
 	"github.com/Soliard/go-tpl-metrics/internal/store"
 	"github.com/Soliard/go-tpl-metrics/models"
 )
@@ -10,11 +11,7 @@ type Service struct {
 	storage    store.Storage
 }
 
-type Config struct {
-	ServerHost string `env:"ADDRESS"`
-}
-
-func NewService(storage store.Storage, config Config) *Service {
+func NewService(storage store.Storage, config *config.Config) *Service {
 	return &Service{
 		storage:    storage,
 		ServerHost: config.ServerHost,
@@ -31,7 +28,7 @@ func (s *Service) UpdateGauge(name string, value float64) error {
 	return err
 }
 
-func (s *Service) GetMetric(name string) (metric models.Metrics, exists bool) {
+func (s *Service) GetMetric(name string) (metric *models.Metrics, exists bool) {
 	metric, exists = s.storage.GetMetric(name)
 	return
 }

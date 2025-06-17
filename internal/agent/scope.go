@@ -16,7 +16,7 @@ func (agent *Agent) Run() {
 	reportCounter := 0
 
 	for {
-		<-ticker.C
+		time.Sleep(time.Second)
 		pollCounter++
 		reportCounter++
 

@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 
+	"github.com/Soliard/go-tpl-metrics/cmd/agent/config"
 	"github.com/Soliard/go-tpl-metrics/internal/agent"
 	"github.com/Soliard/go-tpl-metrics/internal/logger"
 )
@@ -14,10 +15,10 @@ func main() {
 
 	logger.LogInfo("agent", "Starting agent...")
 
-	config := ParseFlags()
+	config := config.New()
 	logger.LogConfig("agent", config)
 
-	agent := agent.NewAgent(config)
+	agent := agent.New(config)
 	logger.LogInfo("agent", fmt.Sprintf("Agent works with service on %s", config.ServerHost))
 	agent.Run()
 }

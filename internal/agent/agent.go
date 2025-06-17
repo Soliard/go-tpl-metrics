@@ -4,6 +4,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Soliard/go-tpl-metrics/cmd/agent/config"
 	"github.com/go-resty/resty/v2"
 )
 
@@ -15,19 +16,13 @@ type Agent struct {
 	reportInterval time.Duration
 }
 
-type Config struct {
-	ServerHost            string `env:"ADDRESS"`
-	PollIntervalSeconds   int    `env:"POLL_INTERVAL"`
-	ReportIntervalSeconds int    `env:"REPORT_INTERVAL"`
-}
-
-func NewAgent(config Config) *Agent {
+func New(config *config.Config) *Agent {
 	return &Agent{
 		serverHostURL:  normalizeServerURL(config.ServerHost),
 		collector:      NewStatsCollector(),
 		httpClient:     resty.New(),
-		pollInterval:   time.Duration(config.PollIntervalSeconds),
-		reportInterval: time.Duration(config.ReportIntervalSeconds),
+		pollInterval:   time.Second * time.Duration(config.PollIntervalSeconds),
+		reportInterval: time.Second * time.Duration(config.ReportIntervalSeconds),
 	}
 }
 
