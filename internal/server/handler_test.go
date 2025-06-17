@@ -13,14 +13,14 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func setupTestServer(t *testing.T) (*httptest.Server, *Service) {
+func setupTestServer(t *testing.T) (*httptest.Server, *MetricsService) {
 	storage := store.NewStorage()
 	config := config.Config{ServerHost: "localhost:8080"}
 	logger, err := logger.New(logger.ComponentServer)
 	if err != nil {
 		panic(err)
 	}
-	service := NewService(storage, &config, logger)
+	service := NewMetricsService(storage, &config, logger)
 	router := MetricRouter(service)
 	return httptest.NewServer(router), service
 }

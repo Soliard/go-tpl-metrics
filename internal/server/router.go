@@ -7,7 +7,7 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 )
 
-func MetricRouter(s *Service) chi.Router {
+func MetricRouter(s *MetricsService) chi.Router {
 	r := chi.NewRouter()
 	r.Use(middleware.Logger)
 	r.Get("/", s.MetricsPageHandler)

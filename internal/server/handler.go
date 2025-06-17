@@ -11,7 +11,7 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-func (s *Service) UpdateHandler(res http.ResponseWriter, req *http.Request) {
+func (s *MetricsService) UpdateHandler(res http.ResponseWriter, req *http.Request) {
 	s.Logger.Info("[UpdateHandler] Incoming request: ", req.Method, req.URL.RawPath)
 	metric := parseMetricURL(req)
 
@@ -41,7 +41,7 @@ func (s *Service) UpdateHandler(res http.ResponseWriter, req *http.Request) {
 	res.WriteHeader(http.StatusOK)
 }
 
-func (s *Service) ValueHandler(res http.ResponseWriter, req *http.Request) {
+func (s *MetricsService) ValueHandler(res http.ResponseWriter, req *http.Request) {
 	s.Logger.Info("[ValueHandler] Incoming request: ", req.Method, req.URL.RawPath)
 	m := parseMetricURL(req)
 
@@ -69,7 +69,7 @@ func (s *Service) ValueHandler(res http.ResponseWriter, req *http.Request) {
 	res.WriteHeader(http.StatusOK)
 }
 
-func (s *Service) MetricsPageHandler(res http.ResponseWriter, req *http.Request) {
+func (s *MetricsService) MetricsPageHandler(res http.ResponseWriter, req *http.Request) {
 	tmpl, err := template.New("metrics").Parse(templates.MetricsTemplate)
 
 	if err != nil {
@@ -99,7 +99,7 @@ func parseMetricURL(req *http.Request) models.MetricStringDTO {
 	return metric
 }
 
-func (s *Service) updateCounterMetric(name string, valueStr string) error {
+func (s *MetricsService) updateCounterMetric(name string, valueStr string) error {
 	metricValue, err := strconv.ParseInt(valueStr, 10, 64)
 	if err != nil {
 		return fmt.Errorf(`invalid metric value, must be an integer`)
@@ -109,7 +109,7 @@ func (s *Service) updateCounterMetric(name string, valueStr string) error {
 	return err
 }
 
-func (s *Service) updateGaugeMetric(name string, valueStr string) error {
+func (s *MetricsService) updateGaugeMetric(name string, valueStr string) error {
 	metricValue, err := strconv.ParseFloat(valueStr, 64)
 	if err != nil {
 		return fmt.Errorf(`invalid metric value, must be a float`)

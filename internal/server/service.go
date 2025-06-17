@@ -7,35 +7,35 @@ import (
 	"github.com/Soliard/go-tpl-metrics/models"
 )
 
-type Service struct {
+type MetricsService struct {
 	ServerHost string
 	storage    store.Storage
 	Logger     *logger.Logger
 }
 
-func NewService(storage store.Storage, config *config.Config, logger *logger.Logger) *Service {
-	return &Service{
+func NewMetricsService(storage store.Storage, config *config.Config, logger *logger.Logger) *MetricsService {
+	return &MetricsService{
 		storage:    storage,
 		ServerHost: config.ServerHost,
 		Logger:     logger,
 	}
 }
 
-func (s *Service) UpdateCounter(name string, value int64) error {
+func (s *MetricsService) UpdateCounter(name string, value int64) error {
 	err := s.storage.UpdateCounter(name, value)
 	return err
 }
 
-func (s *Service) UpdateGauge(name string, value float64) error {
+func (s *MetricsService) UpdateGauge(name string, value float64) error {
 	err := s.storage.UpdateGauge(name, value)
 	return err
 }
 
-func (s *Service) GetMetric(name string) (metric *models.Metrics, exists bool) {
+func (s *MetricsService) GetMetric(name string) (metric *models.Metrics, exists bool) {
 	metric, exists = s.storage.GetMetric(name)
 	return
 }
 
-func (s *Service) GetAllMetrics() []models.Metrics {
+func (s *MetricsService) GetAllMetrics() []models.Metrics {
 	return s.storage.GetAllMetrics()
 }

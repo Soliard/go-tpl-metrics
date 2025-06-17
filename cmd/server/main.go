@@ -22,7 +22,7 @@ func main() {
 	config := config.New(logger)
 	logger.Info("Configure server ", config)
 
-	service := server.NewService(storage, config, logger)
+	service := server.NewMetricsService(storage, config, logger)
 	metricRouter := server.MetricRouter(service)
 
 	logger.Info("Server starting to listen on ", service.ServerHost)
