@@ -34,12 +34,12 @@ const MetricsTemplate = `
             <th>Delta</th>
             <th>Hash</th>
         </tr>
-        {{range .Metrics}}
+        {{range .}}
         <tr>
             <td>{{.ID}}</td>
             <td>{{.MType}}</td>
-            <td>{{.Value}}</td>
-            <td>{{.Delta}}</td>
+            <td>{{.StringifyValue}}</td>
+            <td>{{.StringifyDelta}}</td>
             <td>{{.Hash}}</td>
         </tr>
         {{end}}

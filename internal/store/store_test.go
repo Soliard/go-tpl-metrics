@@ -11,14 +11,16 @@ func TestMemStorage(t *testing.T) {
 
 	t.Run("gauge operations", func(t *testing.T) {
 		// Test UpdateGauge
-		err := storage.UpdateGauge("testGauge", 123.45)
+		var delta1 float64 = 123.45
+		err := storage.UpdateGauge("testGauge", &delta1)
 		assert.NoError(t, err)
 		metric, exists := storage.GetMetric("testGauge")
 		assert.True(t, exists)
 		assert.Equal(t, 123.45, *metric.Value)
 
 		// Test overwrite
-		err = storage.UpdateGauge("testGauge", 67.89)
+		var delta2 float64 = 67.89
+		err = storage.UpdateGauge("testGauge", &delta2)
 		assert.NoError(t, err)
 		metric, exists = storage.GetMetric("testGauge")
 		assert.True(t, exists)
@@ -31,14 +33,16 @@ func TestMemStorage(t *testing.T) {
 
 	t.Run("counter operations", func(t *testing.T) {
 		// Test UpdateCounter
-		err := storage.UpdateCounter("testCounter", 10)
+		var value1 int64 = 10
+		err := storage.UpdateCounter("testCounter", &value1)
 		assert.NoError(t, err)
 		metric, exists := storage.GetMetric("testCounter")
 		assert.True(t, exists)
 		assert.Equal(t, int64(10), *metric.Delta)
 
 		// Test increment
-		err = storage.UpdateCounter("testCounter", 20)
+		var value2 int64 = 20
+		err = storage.UpdateCounter("testCounter", &value2)
 		assert.NoError(t, err)
 		metric, exists = storage.GetMetric("testCounter")
 		assert.True(t, exists)
@@ -51,9 +55,11 @@ func TestMemStorage(t *testing.T) {
 
 	t.Run("gauge and counter interaction", func(t *testing.T) {
 		// Test that gauge overwrites counter
-		err := storage.UpdateCounter("mixed", 100)
+		var value1 int64 = 100
+		err := storage.UpdateCounter("mixed", &value1)
 		assert.NoError(t, err)
-		err = storage.UpdateGauge("mixed", 200.0)
+		var delta1 float64 = 200.0
+		err = storage.UpdateGauge("mixed", &delta1)
 		assert.Error(t, err)
 		metric, exists := storage.GetMetric("mixed")
 		assert.True(t, exists)

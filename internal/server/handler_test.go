@@ -197,35 +197,28 @@ func Test_updateCounterMetric(t *testing.T) {
 	tests := []struct {
 		name       string
 		metricName string
-		value      string
+		value      int64
 		wantErr    bool
 		wantValue  int64
 	}{
 		{
 			name:       "valid counter value",
 			metricName: "testCounter",
-			value:      "42",
+			value:      42,
 			wantErr:    false,
 			wantValue:  42,
 		},
 		{
-			name:       "invalid value format",
-			metricName: "testCounter",
-			value:      "not_a_number",
-			wantErr:    true,
-			wantValue:  0,
-		},
-		{
 			name:       "negative value",
 			metricName: "testCounter",
-			value:      "-10",
+			value:      -10,
 			wantErr:    false,
 			wantValue:  -10,
 		},
 		{
 			name:       "zero value",
 			metricName: "testCounter",
-			value:      "0",
+			value:      0,
 			wantErr:    false,
 			wantValue:  0,
 		},
@@ -235,7 +228,7 @@ func Test_updateCounterMetric(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			_, service := setupTestServer(t)
 
-			err := service.updateCounterMetric(tt.metricName, tt.value)
+			err := service.updateCounterMetric(tt.metricName, &tt.value)
 
 			if tt.wantErr {
 				assert.Error(t, err)
@@ -254,10 +247,12 @@ func Test_updateCounterMetric(t *testing.T) {
 func Test_updateCounterMetric_Accumulation(t *testing.T) {
 	_, s := setupTestServer(t)
 
-	err := s.updateCounterMetric("testCounter", "10")
+	var value1 int64 = 10
+	err := s.updateCounterMetric("testCounter", &value1)
 	assert.NoError(t, err)
 
-	err = s.updateCounterMetric("testCounter", "20")
+	var value2 int64 = 20
+	err = s.updateCounterMetric("testCounter", &value2)
 	assert.NoError(t, err)
 
 	metric, exists := s.GetMetric("testCounter")
@@ -269,35 +264,28 @@ func Test_updateGaugeMetric(t *testing.T) {
 	tests := []struct {
 		name       string
 		metricName string
-		value      string
+		delta      float64
 		wantErr    bool
 		wantValue  float64
 	}{
 		{
 			name:       "valid gauge value",
 			metricName: "testGauge",
-			value:      "123.45",
+			delta:      123.45,
 			wantErr:    false,
 			wantValue:  123.45,
 		},
 		{
-			name:       "invalid value format",
-			metricName: "testGauge",
-			value:      "not_a_number",
-			wantErr:    true,
-			wantValue:  0,
-		},
-		{
 			name:       "negative value",
 			metricName: "testGauge",
-			value:      "-10.5",
+			delta:      -10.5,
 			wantErr:    false,
 			wantValue:  -10.5,
 		},
 		{
 			name:       "zero value",
 			metricName: "testGauge",
-			value:      "0.0",
+			delta:      0.0,
 			wantErr:    false,
 			wantValue:  0.0,
 		},
@@ -307,7 +295,7 @@ func Test_updateGaugeMetric(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			_, s := setupTestServer(t)
 
-			err := s.updateGaugeMetric(tt.metricName, tt.value)
+			err := s.updateGaugeMetric(tt.metricName, &tt.delta)
 
 			if tt.wantErr {
 				assert.Error(t, err)

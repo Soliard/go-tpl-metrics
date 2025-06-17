@@ -21,12 +21,12 @@ func NewMetricsService(storage store.Storage, config *config.Config, logger *log
 	}
 }
 
-func (s *MetricsService) UpdateCounter(name string, value int64) error {
+func (s *MetricsService) UpdateCounter(name string, value *int64) error {
 	err := s.storage.UpdateCounter(name, value)
 	return err
 }
 
-func (s *MetricsService) UpdateGauge(name string, value float64) error {
+func (s *MetricsService) UpdateGauge(name string, value *float64) error {
 	err := s.storage.UpdateGauge(name, value)
 	return err
 }

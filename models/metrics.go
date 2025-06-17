@@ -23,38 +23,27 @@ type Metrics struct {
 	Hash  string   `json:"hash,omitempty"`
 }
 
-type MetricStringDTO struct {
-	MType    string
-	ID       string
-	Value    string
-	Delta    string
-	AccValue string
-	Hash     string
+func (m *Metrics) StringifyDelta() string {
+	if m.Delta != nil {
+		return fmt.Sprintf(`%d`, *m.Delta)
+	} else {
+		return ``
+	}
 }
 
-type MetricsPageData struct {
-	Metrics []*MetricStringDTO
+func (m *Metrics) StringifyValue() string {
+	if m.Value != nil {
+		return strings.TrimRight(fmt.Sprintf(`%.3f`, *m.Value), `0`)
+	} else {
+		return ``
+	}
 }
 
-func СonvertToMetricStringDTO(metric Metrics) *MetricStringDTO {
-	var delta, value string
-	if metric.Delta != nil {
-		delta = fmt.Sprintf(`%d`, *metric.Delta)
-	} else {
-		delta = ``
-	}
-
-	if metric.Value != nil {
-		value = fmt.Sprintf(`%.3f`, *metric.Value)
-	} else {
-		value = ``
-	}
-	value = strings.TrimRight(value, `0`)
-
-	return &MetricStringDTO{
-		ID:    metric.ID,
-		MType: metric.MType,
-		Delta: delta,
-		Value: value,
-	}
+func (m *Metrics) String() string {
+	return fmt.Sprintf("{ID: %s, Type: %s, Value: %s, Delta: %s, Hash: %s}",
+		m.ID,
+		m.MType,
+		m.StringifyValue(),
+		m.StringifyDelta(),
+		m.Hash)
 }

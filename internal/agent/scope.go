@@ -8,7 +8,7 @@ import (
 	"github.com/Soliard/go-tpl-metrics/models"
 )
 
-func (agent *Agent) Run() {
+func (a *Agent) Run() {
 	ticker := time.NewTicker(time.Second) // минимальный интервал
 	defer ticker.Stop()
 
@@ -20,15 +20,15 @@ func (agent *Agent) Run() {
 		pollCounter++
 		reportCounter++
 
-		if pollCounter >= int(agent.pollInterval.Seconds()) {
-			if err := agent.collector.Collect(); err != nil {
+		if pollCounter >= int(a.pollInterval.Seconds()) {
+			if err := a.collector.Collect(); err != nil {
 				fmt.Println(`Error while collection metrics:`, err)
 			}
 			pollCounter = 0
 		}
 
-		if reportCounter >= int(agent.reportInterval.Seconds()) {
-			if err := agent.reportMetrics(); err != nil {
+		if reportCounter >= int(a.reportInterval.Seconds()) {
+			if err := a.reportMetrics(); err != nil {
 				fmt.Println(`error while reporting metrics:`, err)
 			}
 			reportCounter = 0
@@ -36,16 +36,16 @@ func (agent *Agent) Run() {
 	}
 }
 
-func (agent *Agent) reportMetrics() error {
-	for name, value := range agent.collector.Gauges {
-		err := agent.sendMetric(models.Gauge, name, fmt.Sprintf("%v", value))
+func (a *Agent) reportMetrics() error {
+	for name, value := range a.collector.Gauges {
+		err := a.sendMetric(models.Gauge, name, fmt.Sprintf("%v", value))
 		if err != nil {
 			return err
 		}
 	}
 
-	for name, value := range agent.collector.Counters {
-		err := agent.sendMetric(models.Counter, name, fmt.Sprintf("%v", value))
+	for name, value := range a.collector.Counters {
+		err := a.sendMetric(models.Counter, name, fmt.Sprintf("%v", value))
 		if err != nil {
 			return err
 		}
@@ -56,11 +56,11 @@ func (agent *Agent) reportMetrics() error {
 	return nil
 }
 
-func (agent *Agent) sendMetric(mtype string, id string, value string) error {
-	url := fmt.Sprintf(`%s/update/%s/%s/%s`, agent.serverHostURL, mtype, id, value)
+func (a *Agent) sendMetric(mtype string, id string, value string) error {
+	url := fmt.Sprintf(`%s/update/%s/%s/%s`, a.serverHostURL, mtype, id, value)
 	fmt.Printf(`[sendMetric] %s`, url)
 
-	res, err := agent.httpClient.R().
+	res, err := a.httpClient.R().
 		SetHeader("Content-type", "text/plain").
 		Post(url)
 	if err != nil {

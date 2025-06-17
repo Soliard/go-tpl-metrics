@@ -3,6 +3,7 @@ package server
 import (
 	"fmt"
 	"net/http"
+	"sort"
 	"strconv"
 	"text/template"
 
@@ -28,7 +29,7 @@ func (s *MetricsService) UpdateHandler(res http.ResponseWriter, req *http.Reques
 			return
 		}
 	case models.Counter:
-		err := s.updateCounterMetric(metric.ID, metric.Value)
+		err := s.updateCounterMetric(metric.ID, metric.Delta)
 		if err != nil {
 			http.Error(res, err.Error(), http.StatusBadRequest)
 			return
@@ -51,11 +52,10 @@ func (s *MetricsService) ValueHandler(res http.ResponseWriter, req *http.Request
 	}
 	if metric, exists := s.GetMetric(m.ID); exists {
 		if metric.MType == m.MType {
-			dto := models.СonvertToMetricStringDTO(*metric)
 			if m.MType == models.Counter {
-				res.Write([]byte(dto.Delta))
-			} else if dto.MType == models.Gauge {
-				res.Write([]byte(dto.Value))
+				res.Write([]byte(metric.StringifyDelta()))
+			} else if metric.MType == models.Gauge {
+				res.Write([]byte(metric.StringifyValue()))
 			}
 		} else {
 			http.Error(res, `invalid metric type`, http.StatusNotFound)
@@ -77,9 +77,11 @@ func (s *MetricsService) MetricsPageHandler(res http.ResponseWriter, req *http.R
 		return
 	}
 
-	data := models.MetricsPageData{
-		Metrics: s.storage.GetAllMetricsStringDTO(),
-	}
+	data := s.storage.GetAllMetrics()
+
+	sort.Slice(data, func(i, j int) bool {
+		return data[i].ID < data[j].ID
+	})
 
 	res.Header().Set("Content-Type", "text/html; charset=utf-8")
 
@@ -89,32 +91,38 @@ func (s *MetricsService) MetricsPageHandler(res http.ResponseWriter, req *http.R
 	}
 }
 
-func parseMetricURL(req *http.Request) models.MetricStringDTO {
-	metric := models.MetricStringDTO{}
-	metric.MType = chi.URLParam(req, "type")
-	metric.ID = chi.URLParam(req, "name")
-	metric.Value = chi.URLParam(req, "value")
-	fmt.Printf("[parseMetricURL] Parsed metric: type=%s, name=%s, value=%s\n",
-		metric.MType, metric.ID, metric.Value)
+func parseMetricURL(req *http.Request) models.Metrics {
+	metric := models.Metrics{
+		MType: chi.URLParam(req, "type"),
+		ID:    chi.URLParam(req, "name"),
+	}
+
+	// Парсим значение в зависимости от типа метрики
+	valueStr := chi.URLParam(req, "value")
+	if metric.MType == models.Gauge {
+		if value, err := strconv.ParseFloat(valueStr, 64); err == nil {
+			metric.Value = &value
+		}
+	} else if metric.MType == models.Counter {
+		if delta, err := strconv.ParseInt(valueStr, 10, 64); err == nil {
+			metric.Delta = &delta
+		}
+	}
+
+	fmt.Printf("[parseMetricURL] Parsed metric: %s\n", metric.String())
 	return metric
 }
 
-func (s *MetricsService) updateCounterMetric(name string, valueStr string) error {
-	metricValue, err := strconv.ParseInt(valueStr, 10, 64)
-	if err != nil {
-		return fmt.Errorf(`invalid metric value, must be an integer`)
+func (s *MetricsService) updateCounterMetric(name string, value *int64) error {
+	if value == nil {
+		return fmt.Errorf(`invalid metric value`)
 	}
-	err = s.UpdateCounter(name, metricValue)
-
-	return err
+	return s.UpdateCounter(name, value)
 }
 
-func (s *MetricsService) updateGaugeMetric(name string, valueStr string) error {
-	metricValue, err := strconv.ParseFloat(valueStr, 64)
-	if err != nil {
-		return fmt.Errorf(`invalid metric value, must be a float`)
+func (s *MetricsService) updateGaugeMetric(name string, value *float64) error {
+	if value == nil {
+		return fmt.Errorf(`invalid metric value`)
 	}
-	s.storage.UpdateGauge(name, metricValue)
-
-	return nil
+	return s.storage.UpdateGauge(name, value)
 }
