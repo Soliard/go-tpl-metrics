@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/Soliard/go-tpl-metrics/cmd/server/config"
+	"github.com/Soliard/go-tpl-metrics/internal/logger"
 	"github.com/Soliard/go-tpl-metrics/internal/store"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -15,7 +16,11 @@ import (
 func setupTestServer(t *testing.T) (*httptest.Server, *Service) {
 	storage := store.NewStorage()
 	config := config.Config{ServerHost: "localhost:8080"}
-	service := NewService(storage, &config)
+	logger, err := logger.New(logger.ComponentServer)
+	if err != nil {
+		panic(err)
+	}
+	service := NewService(storage, &config, logger)
 	router := MetricRouter(service)
 	return httptest.NewServer(router), service
 }

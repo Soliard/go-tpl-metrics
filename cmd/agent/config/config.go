@@ -2,7 +2,6 @@ package config
 
 import (
 	"flag"
-	"fmt"
 
 	"github.com/Soliard/go-tpl-metrics/internal/logger"
 	"github.com/caarlos0/env/v6"
@@ -14,7 +13,7 @@ type Config struct {
 	ReportIntervalSeconds int    `env:"REPORT_INTERVAL"`
 }
 
-func New() *Config {
+func New(logger *logger.Logger) *Config {
 	config := &Config{}
 
 	flag.StringVar(&config.ServerHost, "a", "localhost:8080", "server addres")
@@ -22,13 +21,13 @@ func New() *Config {
 	flag.IntVar(&config.ReportIntervalSeconds, "r", 10, "metrics send interval in seconds")
 	flag.Parse()
 
-	logger.LogConfig("agent", config)
+	logger.Info("Agent config after flags: ", config)
 
 	err := env.Parse(config)
 	if err != nil {
-		logger.LogError("agent", fmt.Errorf("cannot parse config from env: %w", err))
+		logger.Error("Cannot parse config from env: ", err)
 	}
 
-	logger.LogConfig("agent", config)
+	logger.Info("Agent config after env vars: ", config)
 	return config
 }

@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/Soliard/go-tpl-metrics/cmd/agent/config"
+	"github.com/Soliard/go-tpl-metrics/internal/logger"
 	"github.com/Soliard/go-tpl-metrics/models"
 	"github.com/stretchr/testify/assert"
 )
@@ -20,8 +21,11 @@ func setupTestAgent(serverHost string) *Agent {
 		PollIntervalSeconds:   2,
 		ReportIntervalSeconds: 10,
 	}
-
-	return New(&config)
+	logger, err := logger.New(logger.ComponentAgent)
+	if err != nil {
+		panic(err)
+	}
+	return New(&config, logger)
 }
 
 func TestNewAgent(t *testing.T) {

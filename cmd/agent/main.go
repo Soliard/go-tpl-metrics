@@ -9,16 +9,17 @@ import (
 )
 
 func main() {
-	if err := logger.InitLogger("agent"); err != nil {
+	logger, err := logger.New(logger.ComponentServer)
+	if err != nil {
 		panic(fmt.Sprintf("Failed to initialize logger: %v", err))
 	}
+	defer logger.Close()
+	logger.Info("Starting agent...")
 
-	logger.LogInfo("agent", "Starting agent...")
+	config := config.New(logger)
+	logger.Info("Agent config: ", config)
 
-	config := config.New()
-	logger.LogConfig("agent", config)
-
-	agent := agent.New(config)
-	logger.LogInfo("agent", fmt.Sprintf("Agent works with service on %s", config.ServerHost))
+	agent := agent.New(config, logger)
+	logger.Info("Agent works with service on ", config.ServerHost)
 	agent.Run()
 }

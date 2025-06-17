@@ -11,23 +11,24 @@ import (
 )
 
 func main() {
-	if err := logger.InitLogger("server"); err != nil {
+	logger, err := logger.New(logger.ComponentServer)
+	if err != nil {
 		panic(fmt.Sprintf("Failed to initialize logger: %v", err))
 	}
-
-	logger.LogInfo("server", "Starting server...")
+	defer logger.Close()
+	logger.Info("Starting")
 
 	storage := store.NewStorage()
-	config := config.New()
-	logger.LogConfig("server", config)
+	config := config.New(logger)
+	logger.Info("Configure server ", config)
 
-	service := server.NewService(storage, config)
+	service := server.NewService(storage, config, logger)
 	metricRouter := server.MetricRouter(service)
 
-	logger.LogInfo("server", fmt.Sprintf("Server starting to listen on %s", service.ServerHost))
-	err := http.ListenAndServe(service.ServerHost, metricRouter)
+	logger.Info("Server starting to listen on ", service.ServerHost)
+	err = http.ListenAndServe(service.ServerHost, metricRouter)
 	if err != nil {
-		logger.LogError("server", err)
+		logger.Error(err)
 		panic(err)
 	}
 }
