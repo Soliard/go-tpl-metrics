@@ -13,7 +13,6 @@ import (
 )
 
 func (s *MetricsService) UpdateHandler(res http.ResponseWriter, req *http.Request) {
-	s.Logger.Info("[UpdateHandler] Incoming request: ", req.Method, req.URL.RawPath)
 	metric := parseMetricURL(req)
 
 	if metric.ID == "" {
@@ -43,7 +42,6 @@ func (s *MetricsService) UpdateHandler(res http.ResponseWriter, req *http.Reques
 }
 
 func (s *MetricsService) ValueHandler(res http.ResponseWriter, req *http.Request) {
-	s.Logger.Info("[ValueHandler] Incoming request: ", req.Method, req.URL.RawPath)
 	m := parseMetricURL(req)
 
 	if m.MType == "" || m.ID == "" {

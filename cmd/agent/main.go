@@ -6,20 +6,24 @@ import (
 	"github.com/Soliard/go-tpl-metrics/cmd/agent/config"
 	"github.com/Soliard/go-tpl-metrics/internal/agent"
 	"github.com/Soliard/go-tpl-metrics/internal/logger"
+	"go.uber.org/zap"
 )
 
 func main() {
-	logger, err := logger.New(logger.ComponentServer)
-	if err != nil {
-		panic(fmt.Sprintf("Failed to initialize logger: %v", err))
-	}
-	defer logger.Close()
-	logger.Info("Starting agent...")
 
-	config := config.New(logger)
-	logger.Info("Agent config: ", config)
+	config, err := config.New()
+	if err != nil {
+		panic(fmt.Errorf("cannot create config for agent %w", err))
+	}
+
+	logger, err := logger.New(logger.ComponentServer, config.LogLevel)
+
+	if err != nil {
+		panic(fmt.Errorf("failed to initialize logger: %w", err))
+	}
+	logger.Log.Info("Agent config: ", zap.Any("config", config))
 
 	agent := agent.New(config, logger)
-	logger.Info("Agent works with service on ", config.ServerHost)
+	logger.Log.Info("Agent works with service on", zap.String("ServerHost", config.ServerHost))
 	agent.Run()
 }

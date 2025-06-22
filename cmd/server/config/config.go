@@ -3,27 +3,25 @@ package config
 import (
 	"flag"
 
-	"github.com/Soliard/go-tpl-metrics/internal/logger"
 	"github.com/caarlos0/env/v6"
 )
 
 type Config struct {
 	ServerHost string `env:"ADDRESS"`
+	LogLevel   string `env:"LOG_LEVEL"`
 }
 
-func New(logger *logger.Logger) *Config {
+func New() (*Config, error) {
 	config := &Config{}
 
 	flag.StringVar(&config.ServerHost, "a", "localhost:8080", "server addres")
+	flag.StringVar(&config.LogLevel, "l", "info", "log level")
 	flag.Parse()
-
-	logger.Info("Server config after flags: ", config)
 
 	err := env.Parse(config)
 	if err != nil {
-		logger.Error("Cannot parse config from env: ", err)
+		return nil, err
 	}
 
-	logger.Info("Server config after env vars: ", config)
-	return config
+	return config, nil
 }

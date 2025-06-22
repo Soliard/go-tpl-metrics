@@ -21,7 +21,7 @@ func setupTestAgent(serverHost string) *Agent {
 		PollIntervalSeconds:   2,
 		ReportIntervalSeconds: 10,
 	}
-	logger, err := logger.New(logger.ComponentAgent)
+	logger, err := logger.New(logger.ComponentAgent, "info")
 	if err != nil {
 		panic(err)
 	}

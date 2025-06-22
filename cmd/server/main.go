@@ -8,27 +8,30 @@ import (
 	"github.com/Soliard/go-tpl-metrics/internal/logger"
 	"github.com/Soliard/go-tpl-metrics/internal/server"
 	"github.com/Soliard/go-tpl-metrics/internal/store"
+	"go.uber.org/zap"
 )
 
 func main() {
-	logger, err := logger.New(logger.ComponentServer)
+
+	config, err := config.New()
 	if err != nil {
-		panic(fmt.Sprintf("Failed to initialize logger: %v", err))
+		panic(fmt.Errorf("cannot create config for agent %w", err))
 	}
-	defer logger.Close()
-	logger.Info("Starting")
+
+	logger, err := logger.New(logger.ComponentServer, config.LogLevel)
+
+	if err != nil {
+		panic(fmt.Errorf("failed to initialize logger: %w", err))
+	}
+	logger.Log.Info("Agent config: ", zap.Any("config", config))
 
 	storage := store.NewStorage()
-	config := config.New(logger)
-	logger.Info("Configure server ", config)
-
 	service := server.NewMetricsService(storage, config, logger)
 	metricRouter := server.MetricRouter(service)
 
-	logger.Info("Server starting to listen on ", service.ServerHost)
+	logger.Log.Info("Server starting to listen on ", zap.String("ServerHost", service.ServerHost))
 	err = http.ListenAndServe(service.ServerHost, metricRouter)
 	if err != nil {
-		logger.Error(err)
-		panic(err)
+		logger.Log.Fatal("Fatal error while server serving", zap.Error(err))
 	}
 }
