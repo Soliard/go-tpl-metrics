@@ -18,20 +18,20 @@ func main() {
 		panic(fmt.Errorf("cannot create config for agent %w", err))
 	}
 
-	logger, err := logger.New(logger.ComponentServer, config.LogLevel)
+	logger, err := logger.New(config.LogLevel)
 
 	if err != nil {
 		panic(fmt.Errorf("failed to initialize logger: %w", err))
 	}
-	logger.Log.Info("Agent config: ", zap.Any("config", config))
+	logger.Info("Server config: ", zap.Any("config", config))
 
 	storage := store.NewStorage()
 	service := server.NewMetricsService(storage, config, logger)
 	metricRouter := server.MetricRouter(service)
 
-	logger.Log.Info("Server starting to listen on ", zap.String("ServerHost", service.ServerHost))
+	logger.Info("Server starting to listen on ", zap.String("ServerHost", service.ServerHost))
 	err = http.ListenAndServe(service.ServerHost, metricRouter)
 	if err != nil {
-		logger.Log.Fatal("Fatal error while server serving", zap.Error(err))
+		logger.Fatal("Fatal error while server serving", zap.Error(err))
 	}
 }

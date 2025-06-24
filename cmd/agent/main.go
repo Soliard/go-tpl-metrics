@@ -16,14 +16,14 @@ func main() {
 		panic(fmt.Errorf("cannot create config for agent %w", err))
 	}
 
-	logger, err := logger.New(logger.ComponentServer, config.LogLevel)
+	logger, err := logger.New(config.LogLevel)
 
 	if err != nil {
 		panic(fmt.Errorf("failed to initialize logger: %w", err))
 	}
-	logger.Log.Info("Agent config: ", zap.Any("config", config))
+	logger.Info("Agent config: ", zap.Any("config", config))
 
 	agent := agent.New(config, logger)
-	logger.Log.Info("Agent works with service on", zap.String("ServerHost", config.ServerHost))
+	logger.Info("Agent works with service on", zap.String("ServerHost", config.ServerHost))
 	agent.Run()
 }

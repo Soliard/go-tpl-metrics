@@ -3,13 +3,13 @@ package server
 import (
 	"net/http"
 
+	"github.com/Soliard/go-tpl-metrics/internal/logger"
 	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
 )
 
 func MetricRouter(s *MetricsService) chi.Router {
 	r := chi.NewRouter()
-	r.Use(middleware.Logger)
+	r.Use(logger.LoggingMiddleware(s.Logger))
 	r.Get("/", s.MetricsPageHandler)
 	r.Route("/update", func(r chi.Router) {
 		// Полный путь с тремя параметрами

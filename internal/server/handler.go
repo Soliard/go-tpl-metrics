@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"text/template"
 
+	"github.com/Soliard/go-tpl-metrics/internal/logger"
 	"github.com/Soliard/go-tpl-metrics/internal/server/templates"
 	"github.com/Soliard/go-tpl-metrics/models"
 	"github.com/go-chi/chi/v5"
@@ -68,6 +69,8 @@ func (s *MetricsService) ValueHandler(res http.ResponseWriter, req *http.Request
 }
 
 func (s *MetricsService) MetricsPageHandler(res http.ResponseWriter, req *http.Request) {
+	logger := logger.LoggerFromCtx(req.Context(), s.Logger)
+	logger.Info("recieved request for metrics page handler")
 	tmpl, err := template.New("metrics").Parse(templates.MetricsTemplate)
 
 	if err != nil {
