@@ -12,6 +12,7 @@ const (
 	ctxKeyLogger ctxKey = "logger"
 )
 
+// исключает перезапись ключей контекста сторонними сервисами/либами
 type ctxKey string
 
 type (

@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"errors"
 	"fmt"
 	"math/rand"
 	"runtime"
@@ -20,6 +21,9 @@ func NewStatsCollector() *StatsCollector {
 
 func (s *StatsCollector) UpdateGauge(id string, value float64) {
 	if v, ok := s.Metrics[id]; ok {
+		if v.MType != models.Gauge {
+			panic(errors.New("collector trying to update counter metric with gauge value"))
+		}
 		v.Value = &value
 	} else {
 		s.Metrics[id] = models.NewGaugeMetric(id, value)
@@ -28,6 +32,9 @@ func (s *StatsCollector) UpdateGauge(id string, value float64) {
 
 func (s *StatsCollector) UpdateCounter(id string) {
 	if v, ok := s.Metrics[id]; ok {
+		if v.MType != models.Counter {
+			panic(errors.New("collector trying to update gauge metric with counter value"))
+		}
 		*v.Delta += 1
 	} else {
 		s.Metrics[id] = models.NewCounterMetric(id, 1)

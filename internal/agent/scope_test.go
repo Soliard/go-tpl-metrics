@@ -43,9 +43,7 @@ func TestNewAgent(t *testing.T) {
 func TestAgent_sendMetric(t *testing.T) {
 	tests := []struct {
 		name         string
-		metricType   string
-		metricID     string
-		metricValue  string
+		metric       *models.Metrics
 		wantURL      string
 		serverStatus int
 		wantErr      bool
@@ -53,27 +51,21 @@ func TestAgent_sendMetric(t *testing.T) {
 	}{
 		{
 			name:         "successful gauge metric",
-			metricType:   models.Gauge,
-			metricID:     "testMetric",
-			metricValue:  "123.45",
+			metric:       models.NewGaugeMetric("testMetric", 123.45),
 			wantURL:      fmt.Sprintf("/update/%s/testMetric/123.45", models.Gauge),
 			serverStatus: http.StatusOK,
 			wantErr:      false,
 		},
 		{
 			name:         "successful counter metric",
-			metricType:   models.Counter,
-			metricID:     "testMetric",
-			metricValue:  "32",
+			metric:       models.NewCounterMetric("testMetric", 32),
 			wantURL:      fmt.Sprintf("/update/%s/testMetric/32", models.Counter),
 			serverStatus: http.StatusOK,
 			wantErr:      false,
 		},
 		{
 			name:         "server error",
-			metricType:   models.Gauge,
-			metricID:     "testMetric",
-			metricValue:  "123.45",
+			metric:       models.NewGaugeMetric("testMetric", 123.45),
 			wantURL:      fmt.Sprintf("/update/%s/testMetric/123.45", models.Gauge),
 			serverStatus: http.StatusInternalServerError,
 			wantErr:      true,
@@ -81,9 +73,7 @@ func TestAgent_sendMetric(t *testing.T) {
 		},
 		{
 			name:         "server not found",
-			metricType:   models.Gauge,
-			metricID:     "testMetric",
-			metricValue:  "123.45",
+			metric:       models.NewGaugeMetric("testMetric", 123.45),
 			wantURL:      fmt.Sprintf("/update/%s/testMetric/123.45", models.Gauge),
 			serverStatus: http.StatusNotFound,
 			wantErr:      true,
@@ -100,7 +90,7 @@ func TestAgent_sendMetric(t *testing.T) {
 			defer server.Close()
 
 			agent := setupTestAgent(server.URL)
-			err := agent.sendMetric(tt.metricType, tt.metricID, tt.metricValue)
+			err := agent.sendMetric(tt.metric)
 
 			if tt.wantErr {
 				assert.Error(t, err)

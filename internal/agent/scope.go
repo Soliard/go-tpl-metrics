@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/Soliard/go-tpl-metrics/models"
+	"go.uber.org/zap"
 )
 
 func (a *Agent) Run() {
@@ -22,14 +23,14 @@ func (a *Agent) Run() {
 
 		if pollCounter >= int(a.pollInterval.Seconds()) {
 			if err := a.collector.Collect(); err != nil {
-				fmt.Println(`Error while collection metrics:`, err)
+				a.Logger.Error("error while collection metrics", zap.Error(err))
 			}
 			pollCounter = 0
 		}
 
 		if reportCounter >= int(a.reportInterval.Seconds()) {
 			if err := a.reportMetrics(); err != nil {
-				fmt.Println(`error while reporting metrics:`, err)
+				a.Logger.Error("error while reporting metrics", zap.Error(err))
 			}
 			reportCounter = 0
 		}
@@ -37,27 +38,48 @@ func (a *Agent) Run() {
 }
 
 func (a *Agent) reportMetrics() error {
-	for name, value := range a.collector.Metrics {
-		err := a.sendMetric(models.Gauge, name, fmt.Sprintf("%v", value.Value))
+
+	for _, value := range a.collector.Metrics {
+		err := a.sendMetricJSON(value)
 		if err != nil {
 			return err
 		}
 	}
 
-	for name, value := range a.collector.Metrics {
-		err := a.sendMetric(models.Counter, name, fmt.Sprintf("%v", value.Delta))
-		if err != nil {
-			return err
-		}
-	}
-
-	fmt.Println("Metrics reported to the server")
+	a.Logger.Debug("Metrics reported to the server")
 
 	return nil
 }
 
-func (a *Agent) sendMetric(mtype string, id string, value string) error {
-	url := fmt.Sprintf(`%s/update/%s/%s/%s`, a.serverHostURL, mtype, id, value)
+func (a *Agent) sendMetricJSON(metric *models.Metrics) error {
+	url := fmt.Sprintf(`%s/update`, a.serverHostURL)
+	req := a.httpClient.R()
+	req.SetHeader("Content-type", "application/json")
+	req.SetBody(metric)
+	res, err := req.Post(url)
+	if err != nil {
+		a.Logger.Error("error while send metric as json to server",
+			zap.Any("metric", metric))
+		return err
+	}
+
+	if res.StatusCode() != http.StatusOK {
+		a.Logger.Error("server returned not ok response for sended metric from agent",
+			zap.Any("metric", metric),
+			zap.Int("statuscode", res.StatusCode()))
+	}
+
+	return nil
+}
+
+func (a *Agent) sendMetric(metric *models.Metrics) error {
+	var value string
+	if metric.MType == models.Counter {
+		value = metric.StringifyDelta()
+	} else {
+		value = metric.StringifyValue()
+	}
+	url := fmt.Sprintf(`%s/update/%s/%s/%s`, a.serverHostURL, metric.MType, metric.ID, value)
 	fmt.Printf(`[sendMetric] %s`, url)
 
 	res, err := a.httpClient.R().
