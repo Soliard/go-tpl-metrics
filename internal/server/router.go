@@ -12,11 +12,10 @@ func MetricRouter(s *MetricsService) chi.Router {
 	r.Use(logger.LoggingMiddleware(s.Logger))
 	r.Get("/", s.MetricsPageHandler)
 	r.Route("/update", func(r chi.Router) {
-		// Полный путь с тремя параметрами
-		r.Post("/", func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusBadRequest) })
+		r.Post("/", s.UpdateHandler)
 		r.Post("/{type}", func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusNotFound) })
 		r.Post("/{type}/{name}", func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusBadRequest) })
-		r.Post("/{type}/{name}/{value}", s.UpdateHandler)
+		r.Post("/{type}/{name}/{value}", s.UpdateViaURLHandler)
 	})
 	r.Route("/value", func(r chi.Router) {
 		r.Get("/{type}/{name}", s.ValueHandler)

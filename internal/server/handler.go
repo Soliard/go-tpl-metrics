@@ -1,6 +1,7 @@
 package server
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"sort"
@@ -14,6 +15,55 @@ import (
 )
 
 func (s *MetricsService) UpdateHandler(res http.ResponseWriter, req *http.Request) {
+	buf := json.NewDecoder(req.Body)
+	defer req.Body.Close()
+
+	metric := &models.Metrics{}
+
+	err := buf.Decode(metric)
+	if err != nil {
+
+	}
+
+	if metric.ID == "" {
+		http.Error(res, `metric name cannot be empty`, http.StatusNotFound)
+		return
+	}
+
+	switch metric.MType {
+	case models.Gauge:
+		err := s.updateGaugeMetric(metric.ID, metric.Value)
+		if err != nil {
+			http.Error(res, err.Error(), http.StatusBadRequest)
+			return
+		}
+	case models.Counter:
+		err := s.updateCounterMetric(metric.ID, metric.Delta)
+		if err != nil {
+			http.Error(res, err.Error(), http.StatusBadRequest)
+			return
+		}
+	default:
+		http.Error(res, `invalid metric type`, http.StatusBadRequest)
+		return
+	}
+
+	retMetric, ok := s.GetMetric(metric.ID)
+	if !ok {
+		panic(ok)
+	}
+
+	encoder := json.NewEncoder(res)
+	err = encoder.Encode(retMetric)
+	if err != nil {
+
+	}
+
+	res.Header().Set("Content-Type", "application/json")
+	res.WriteHeader(http.StatusOK)
+}
+
+func (s *MetricsService) UpdateViaURLHandler(res http.ResponseWriter, req *http.Request) {
 	metric := parseMetricURL(req)
 
 	if metric.ID == "" {

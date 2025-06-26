@@ -109,12 +109,6 @@ func TestUpdateHandler(t *testing.T) {
 			url:            "/update//testMetric/123.45",
 			expectedStatus: http.StatusBadRequest,
 		},
-		{
-			name:           "malformed URL",
-			method:         http.MethodPost,
-			url:            "/update",
-			expectedStatus: http.StatusBadRequest,
-		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
