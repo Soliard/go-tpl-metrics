@@ -37,15 +37,15 @@ func (a *Agent) Run() {
 }
 
 func (a *Agent) reportMetrics() error {
-	for name, value := range a.collector.Gauges {
-		err := a.sendMetric(models.Gauge, name, fmt.Sprintf("%v", value))
+	for name, value := range a.collector.Metrics {
+		err := a.sendMetric(models.Gauge, name, fmt.Sprintf("%v", value.Value))
 		if err != nil {
 			return err
 		}
 	}
 
-	for name, value := range a.collector.Counters {
-		err := a.sendMetric(models.Counter, name, fmt.Sprintf("%v", value))
+	for name, value := range a.collector.Metrics {
+		err := a.sendMetric(models.Counter, name, fmt.Sprintf("%v", value.Delta))
 		if err != nil {
 			return err
 		}
