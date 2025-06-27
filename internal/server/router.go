@@ -18,7 +18,8 @@ func MetricRouter(s *MetricsService) chi.Router {
 		r.Post("/{type}/{name}/{value}", s.UpdateViaURLHandler)
 	})
 	r.Route("/value", func(r chi.Router) {
-		r.Get("/{type}/{name}", s.ValueHandler)
+		r.Post("/", s.ValueHandler)
+		r.Get("/{type}/{name}", s.ValueViaURLHandler)
 	})
 
 	return r

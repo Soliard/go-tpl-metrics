@@ -63,3 +63,10 @@ func (m *Metrics) String() string {
 		m.StringifyDelta(),
 		m.Hash)
 }
+
+func PFloat(float float64) *float64 {
+	return &float
+}
+func PInt(int int64) *int64 {
+	return &int
+}

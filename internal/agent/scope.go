@@ -46,7 +46,7 @@ func (a *Agent) reportMetrics() error {
 		}
 	}
 
-	a.Logger.Debug("Metrics reported to the server")
+	a.Logger.Info("Metrics reported to the server")
 
 	return nil
 }
