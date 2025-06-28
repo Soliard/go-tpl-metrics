@@ -29,11 +29,9 @@ func (s *MetricsService) ValueHandler(res http.ResponseWriter, req *http.Request
 		http.Error(res, `metric with this name doesnt exists`, http.StatusNotFound)
 		return
 	}
-
-	encoder := json.NewEncoder(res)
-	err = encoder.Encode(retMetric)
+	retBody, err := json.Marshal(retMetric)
 	if err != nil {
-		s.Logger.Error("cant write metric into response body",
+		s.Logger.Error("cant marshal metric",
 			zap.Error(err),
 			zap.Any("metric", retMetric))
 		http.Error(res, "cant return metric", http.StatusInternalServerError)
@@ -41,6 +39,7 @@ func (s *MetricsService) ValueHandler(res http.ResponseWriter, req *http.Request
 	}
 
 	res.WriteHeader(http.StatusOK)
+	res.Write(retBody)
 
 }
 

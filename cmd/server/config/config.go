@@ -15,7 +15,7 @@ func New() (*Config, error) {
 	config := &Config{}
 
 	flag.StringVar(&config.ServerHost, "a", "localhost:8080", "server addres")
-	flag.StringVar(&config.LogLevel, "l", "info", "log level")
+	flag.StringVar(&config.LogLevel, "l", "warn", "log level")
 	flag.Parse()
 
 	err := env.Parse(config)

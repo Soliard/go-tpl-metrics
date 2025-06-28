@@ -1,6 +1,7 @@
 package server
 
 import (
+	"bytes"
 	"net/http"
 	"sort"
 	"text/template"
@@ -25,10 +26,13 @@ func (s *MetricsService) MetricsPageHandler(res http.ResponseWriter, req *http.R
 		return data[i].ID < data[j].ID
 	})
 
-	res.Header().Set("Content-Type", "text/html; charset=utf-8")
-
-	if err := tmpl.Execute(res, data); err != nil {
+	var bufTemplate bytes.Buffer
+	if err := tmpl.Execute(&bufTemplate, data); err != nil {
 		http.Error(res, "Error executing template: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
+	res.Header().Set("Content-Type", "text/html; charset=utf-8")
+	res.WriteHeader(http.StatusOK)
+	res.Write(bufTemplate.Bytes())
+
 }

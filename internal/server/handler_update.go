@@ -12,7 +12,6 @@ import (
 )
 
 func (s *MetricsService) UpdateHandler(res http.ResponseWriter, req *http.Request) {
-	res.Header().Set("Content-Type", "application/json")
 	if req.Header.Get("Content-type") != "application/json" {
 		http.Error(res, "only application/json content accepting", http.StatusBadRequest)
 		return
@@ -65,17 +64,18 @@ func (s *MetricsService) UpdateHandler(res http.ResponseWriter, req *http.Reques
 		return
 	}
 
-	encoder := json.NewEncoder(res)
-	err = encoder.Encode(retMetric)
+	retBody, err := json.Marshal(retMetric)
 	if err != nil {
-		s.Logger.Error("cant write metric into response body",
+		s.Logger.Error("cant marshal metric",
 			zap.Error(err),
 			zap.Any("metric", retMetric))
-		http.Error(res, "cant return result metric", http.StatusInternalServerError)
+		http.Error(res, "cant return metric", http.StatusInternalServerError)
 		return
 	}
 
+	res.Header().Set("Content-Type", "application/json")
 	res.WriteHeader(http.StatusOK)
+	res.Write(retBody)
 }
 
 func (s *MetricsService) UpdateViaURLHandler(res http.ResponseWriter, req *http.Request) {

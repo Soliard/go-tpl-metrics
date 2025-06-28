@@ -1,10 +1,12 @@
 package agent
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"time"
 
+	"github.com/Soliard/go-tpl-metrics/internal/compressor"
 	"github.com/Soliard/go-tpl-metrics/models"
 	"go.uber.org/zap"
 )
@@ -54,8 +56,20 @@ func (a *Agent) reportMetrics() error {
 func (a *Agent) sendMetricJSON(metric *models.Metrics) error {
 	url := fmt.Sprintf(`%s/update`, a.serverHostURL)
 	req := a.httpClient.R()
-	req.SetHeader("Content-type", "application/json")
-	req.SetBody(metric)
+
+	buf, err := json.Marshal(metric)
+	if err != nil {
+		return fmt.Errorf("cant marshal metric: %v", err)
+	}
+	compressed, err := compressor.CompressData(buf)
+	if err != nil {
+		return fmt.Errorf("cant compress data: %v", err)
+	}
+	req.Header.Set("Content-type", "application/json")
+	req.Header.Set("Content-Encoding", "gzip")
+	// resty позаботится о асептинге gzip и о расшифровке тела ответа из gzip
+	req.Header.Set("Accept", "application/json")
+	req.SetBody(compressed)
 	res, err := req.Post(url)
 	if err != nil {
 		a.Logger.Error("error while send metric as json to server",
@@ -63,10 +77,18 @@ func (a *Agent) sendMetricJSON(metric *models.Metrics) error {
 		return err
 	}
 
+	//проверяем ответ
 	if res.StatusCode() != http.StatusOK {
 		a.Logger.Error("server returned not ok response for sended metric from agent",
 			zap.Any("metric", metric),
 			zap.Int("statuscode", res.StatusCode()))
+	}
+
+	retMetric := models.Metrics{}
+	err = json.Unmarshal(res.Body(), &retMetric)
+	if err != nil {
+		a.Logger.Error("cant unmarshal returned metric from server", zap.Error(err))
+		return err
 	}
 
 	return nil
