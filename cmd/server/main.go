@@ -1,9 +1,9 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/Soliard/go-tpl-metrics/cmd/server/config"
 	"github.com/Soliard/go-tpl-metrics/internal/logger"
@@ -14,21 +14,27 @@ import (
 
 func main() {
 
-	fmt.Println("server starting...")
+	log.Print("server starting...")
 	config, err := config.New()
 	if err != nil {
-		log.Fatal("cannot create config for server")
+		log.Printf("cannot create config for server")
+		os.Stdout.Sync()
+		os.Exit(1)
 	}
 
 	logger, err := logger.New(config.LogLevel)
 	if err != nil {
-		log.Fatalf("failed to initialize logger: %v", err)
+		log.Printf("failed to initialize logger: %v", err)
+		os.Stdout.Sync()
+		os.Exit(1)
 	}
 	logger.Info("Server config: ", zap.Any("config", config))
 
 	storage, err := store.NewFileStorage(config.FileStoragePath, config.IsRestoreFromFile)
 	if err != nil {
-		logger.Fatal("error while creating storage", zap.Error(err))
+		logger.Error("error while creating storage", zap.Error(err))
+		os.Stdout.Sync()
+		os.Exit(1)
 	}
 	service := server.NewMetricsService(storage, config, logger)
 	metricRouter := server.MetricRouter(service)
@@ -36,6 +42,8 @@ func main() {
 	logger.Info("Server starting to listen on ", zap.String("ServerHost", service.ServerHost))
 	err = http.ListenAndServe(service.ServerHost, metricRouter)
 	if err != nil {
-		logger.Fatal("Fatal error while server serving", zap.Error(err))
+		logger.Error("Fatal error while server serving", zap.Error(err))
+		os.Stdout.Sync()
+		os.Exit(1)
 	}
 }

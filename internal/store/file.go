@@ -2,6 +2,7 @@ package store
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -63,7 +64,9 @@ func (s *fileStorage) GetAllMetrics() []models.Metrics {
 }
 
 func restoreFromFile(filePath string) (map[string]*models.Metrics, error) {
-	file, err := os.OpenFile(filePath, os.O_RDONLY, 0666)
+	// в любом случае создаем директории и файл
+	os.MkdirAll(filepath.Dir(filePath), 0755)
+	file, err := os.OpenFile(filePath, os.O_RDONLY|os.O_CREATE, 0666)
 	if err != nil {
 		return nil, err
 	}
@@ -74,9 +77,12 @@ func restoreFromFile(filePath string) (map[string]*models.Metrics, error) {
 		return nil, err
 	}
 	metrics := map[string]*models.Metrics{}
+	if string(b) == "" {
+		return metrics, nil
+	}
 	err = json.Unmarshal(b, &metrics)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("cant unmarshal (restore) data from storage file: %v", err)
 	}
 	return metrics, nil
 

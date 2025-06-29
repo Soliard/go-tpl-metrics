@@ -28,3 +28,4 @@ vendor/
 logs/
 *.log
 /cmd/server/FileStorage
+/FileStorage
