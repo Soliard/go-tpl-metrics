@@ -16,7 +16,7 @@ import (
 )
 
 func setupTestServer(t *testing.T) (*httptest.Server, *MetricsService) {
-	storage := store.NewStorage()
+	storage := store.NewMemoryStorage()
 	config := config.Config{ServerHost: "localhost:8080"}
 	logger, err := logger.New("info")
 	if err != nil {

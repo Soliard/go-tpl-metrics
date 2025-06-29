@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	"log"
 
 	"github.com/Soliard/go-tpl-metrics/cmd/agent/config"
 	"github.com/Soliard/go-tpl-metrics/internal/agent"
@@ -13,13 +13,13 @@ func main() {
 
 	config, err := config.New()
 	if err != nil {
-		panic(fmt.Errorf("cannot create config for agent %w", err))
+		log.Fatalf("cannot create config for agent %v", err)
 	}
 
 	logger, err := logger.New(config.LogLevel)
 
 	if err != nil {
-		panic(fmt.Errorf("failed to initialize logger: %w", err))
+		log.Fatalf("failed to initialize logger: %v", err)
 	}
 	logger.Info("Agent config: ", zap.Any("config", config))
 

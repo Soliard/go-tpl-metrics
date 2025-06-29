@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/Soliard/go-tpl-metrics/cmd/server/config"
@@ -13,19 +14,22 @@ import (
 
 func main() {
 
+	fmt.Println("server starting...")
 	config, err := config.New()
 	if err != nil {
-		panic(fmt.Errorf("cannot create config for agent %w", err))
+		log.Fatal("cannot create config for server")
 	}
 
 	logger, err := logger.New(config.LogLevel)
-
 	if err != nil {
-		panic(fmt.Errorf("failed to initialize logger: %w", err))
+		log.Fatalf("failed to initialize logger: %v", err)
 	}
 	logger.Info("Server config: ", zap.Any("config", config))
 
-	storage := store.NewStorage()
+	storage, err := store.NewFileStorage(config.FileStoragePath, config.IsRestoreFromFile)
+	if err != nil {
+		logger.Fatal("error while creating storage", zap.Error(err))
+	}
 	service := server.NewMetricsService(storage, config, logger)
 	metricRouter := server.MetricRouter(service)
 
