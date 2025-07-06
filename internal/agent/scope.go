@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/Soliard/go-tpl-metrics/internal/compressor"
@@ -54,7 +55,10 @@ func (a *Agent) reportMetrics() error {
 }
 
 func (a *Agent) sendMetricJSON(metric *models.Metrics) error {
-	url := fmt.Sprintf(`%s/update`, a.serverHostURL)
+	url, err := url.JoinPath(a.serverHostURL, "update")
+	if err != nil {
+		return err
+	}
 	req := a.httpClient.R()
 
 	buf, err := json.Marshal(metric)
@@ -103,7 +107,10 @@ func (a *Agent) sendMetric(metric *models.Metrics) error {
 	} else {
 		value = metric.StringifyValue()
 	}
-	url := fmt.Sprintf(`%s/update/%s/%s/%s`, a.serverHostURL, metric.MType, metric.ID, value)
+	url, err := url.JoinPath(a.serverHostURL, "update", metric.MType, metric.ID, value)
+	if err != nil {
+		return err
+	}
 	fmt.Printf(`[sendMetric] %s`, url)
 
 	res, err := a.httpClient.R().

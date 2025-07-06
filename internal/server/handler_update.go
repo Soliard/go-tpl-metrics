@@ -36,14 +36,14 @@ func (s *MetricsService) UpdateHandler(res http.ResponseWriter, req *http.Reques
 		err := s.UpdateGauge(metric.ID, metric.Value)
 		if err != nil {
 			s.Logger.Error("error while update gauge metric", zap.Error(err), zap.Any("recieved metric", metric))
-			http.Error(res, err.Error(), http.StatusBadRequest)
+			http.Error(res, err.Error(), http.StatusInternalServerError)
 			return
 		}
 	case models.Counter:
 		err := s.UpdateCounter(metric.ID, metric.Delta)
 		if err != nil {
 			s.Logger.Error("error while update counter metric", zap.Error(err), zap.Any("recieved metric", metric))
-			http.Error(res, err.Error(), http.StatusBadRequest)
+			http.Error(res, err.Error(), http.StatusInternalServerError)
 			return
 		}
 	default:
