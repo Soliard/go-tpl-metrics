@@ -17,7 +17,7 @@ type memStorage struct {
 	metrics map[string]*models.Metrics
 }
 
-func NewStorage() Storage {
+func NewMemoryStorage() Storage {
 	return &memStorage{
 		metrics: map[string]*models.Metrics{},
 	}

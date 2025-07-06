@@ -4,22 +4,21 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
 )
 
 func MetricRouter(s *MetricsService) chi.Router {
 	r := chi.NewRouter()
-	r.Use(middleware.Logger)
+	r.Use(s.LoggingMiddleware, s.GzipMiddleware)
 	r.Get("/", s.MetricsPageHandler)
 	r.Route("/update", func(r chi.Router) {
-		// Полный путь с тремя параметрами
-		r.Post("/", func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusBadRequest) })
+		r.Post("/", s.UpdateHandler)
 		r.Post("/{type}", func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusNotFound) })
 		r.Post("/{type}/{name}", func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusBadRequest) })
-		r.Post("/{type}/{name}/{value}", s.UpdateHandler)
+		r.Post("/{type}/{name}/{value}", s.UpdateViaURLHandler)
 	})
 	r.Route("/value", func(r chi.Router) {
-		r.Get("/{type}/{name}", s.ValueHandler)
+		r.Post("/", s.ValueHandler)
+		r.Get("/{type}/{name}", s.ValueViaURLHandler)
 	})
 
 	return r

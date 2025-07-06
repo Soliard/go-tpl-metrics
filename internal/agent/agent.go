@@ -5,20 +5,20 @@ import (
 	"time"
 
 	"github.com/Soliard/go-tpl-metrics/cmd/agent/config"
-	"github.com/Soliard/go-tpl-metrics/internal/logger"
 	"github.com/go-resty/resty/v2"
+	"go.uber.org/zap"
 )
 
 type Agent struct {
 	serverHostURL  string
 	collector      *StatsCollector
 	httpClient     *resty.Client
-	Logger         *logger.Logger
+	Logger         *zap.Logger
 	pollInterval   time.Duration
 	reportInterval time.Duration
 }
 
-func New(config *config.Config, logger *logger.Logger) *Agent {
+func New(config *config.Config, logger *zap.Logger) *Agent {
 	return &Agent{
 		serverHostURL:  normalizeServerURL(config.ServerHost),
 		collector:      NewStatsCollector(),

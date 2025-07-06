@@ -1,7 +1,6 @@
 package server
 
 import (
-	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -9,39 +8,25 @@ import (
 	"github.com/Soliard/go-tpl-metrics/cmd/server/config"
 	"github.com/Soliard/go-tpl-metrics/internal/logger"
 	"github.com/Soliard/go-tpl-metrics/internal/store"
+	"github.com/Soliard/go-tpl-metrics/models"
+	"github.com/go-resty/resty/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func setupTestServer(t *testing.T) (*httptest.Server, *MetricsService) {
-	storage := store.NewStorage()
+	storage := store.NewMemoryStorage()
 	config := config.Config{ServerHost: "localhost:8080"}
-	logger, err := logger.New(logger.ComponentServer)
-	if err != nil {
-		panic(err)
-	}
+	logger, err := logger.New("info")
+	require.NoError(t, err)
 	service := NewMetricsService(storage, &config, logger)
 	router := MetricRouter(service)
 	return httptest.NewServer(router), service
 }
 
-func testRequest(t *testing.T, ts *httptest.Server, method,
-	path string) (*http.Response, string) {
-	req, err := http.NewRequest(method, ts.URL+path, nil)
-	require.NoError(t, err)
-
-	resp, err := ts.Client().Do(req)
-	require.NoError(t, err)
-	defer resp.Body.Close()
-
-	respBody, err := io.ReadAll(resp.Body)
-	require.NoError(t, err)
-
-	return resp, string(respBody)
-}
-
-func TestUpdateHandler(t *testing.T) {
+func TestUpdateViaURLHandler(t *testing.T) {
 	ts, _ := setupTestServer(t)
+	client := resty.New()
 	defer ts.Close()
 	tests := []struct {
 		name           string
@@ -109,88 +94,85 @@ func TestUpdateHandler(t *testing.T) {
 			url:            "/update//testMetric/123.45",
 			expectedStatus: http.StatusBadRequest,
 		},
-		{
-			name:           "malformed URL",
-			method:         http.MethodPost,
-			url:            "/update",
-			expectedStatus: http.StatusBadRequest,
-		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			res, _ := testRequest(t, ts, tt.method, tt.url)
-			defer res.Body.Close()
-			assert.Equal(t, tt.expectedStatus, res.StatusCode)
+			resp, err := client.R().
+				Execute(tt.method, ts.URL+tt.url)
+			require.NoError(t, err)
+			assert.Equal(t, tt.expectedStatus, resp.StatusCode())
 		})
 	}
 }
 
-func TestValueHandler(t *testing.T) {
-	ts, _ := setupTestServer(t)
+func TestUpdateHandler(t *testing.T) {
+	ts, service := setupTestServer(t)
+	client := resty.New()
 	defer ts.Close()
-
-	// Предварительная настройка данных
-	updateTests := []struct {
-		method string
-		url    string
-	}{
-		{http.MethodPost, "/update/gauge/testMetric/123.45"},
-		{http.MethodPost, "/update/counter/testCounter/42"},
-	}
-
-	for _, tt := range updateTests {
-		res, _ := testRequest(t, ts, tt.method, tt.url)
-		defer res.Body.Close()
-		assert.Equal(t, http.StatusOK, res.StatusCode)
-	}
-	// Тестирование получения значений
 	tests := []struct {
-		name          string
-		method        string
-		url           string
-		expectedValue string
-		expectedCode  int
+		name           string
+		metric         *models.Metrics
+		method         string
+		wantMetric     *models.Metrics
+		expectedStatus int
 	}{
 		{
-			name:          "get gauge metric",
-			method:        http.MethodGet,
-			url:           "/value/gauge/testMetric",
-			expectedValue: "123.45",
-			expectedCode:  http.StatusOK,
+			name:           "valid gauge metric",
+			method:         http.MethodPost,
+			metric:         models.NewGaugeMetric("testMetric", 123.45),
+			wantMetric:     models.NewGaugeMetric("testMetric", 123.45),
+			expectedStatus: http.StatusOK,
 		},
 		{
-			name:          "get counter metric",
-			method:        http.MethodGet,
-			url:           "/value/counter/testCounter",
-			expectedValue: "42",
-			expectedCode:  http.StatusOK,
+			name:           "second valid gauge metric",
+			method:         http.MethodPost,
+			metric:         models.NewGaugeMetric("testMetric", 123.45),
+			wantMetric:     models.NewGaugeMetric("testMetric", 123.45),
+			expectedStatus: http.StatusOK,
 		},
 		{
-			name:          "non-existent metric",
-			method:        http.MethodGet,
-			url:           "/value/gauge/nonExistent",
-			expectedValue: "",
-			expectedCode:  http.StatusNotFound,
+			name:           "valid counter metric",
+			method:         http.MethodPost,
+			metric:         models.NewCounterMetric("testCounter", 42),
+			wantMetric:     models.NewCounterMetric("testCounter", 42),
+			expectedStatus: http.StatusOK,
 		},
 		{
-			name:          "invalid method",
-			method:        http.MethodPost,
-			url:           "/value/gauge/testMetric",
-			expectedValue: "",
-			expectedCode:  http.StatusMethodNotAllowed,
+			name:           "second valid counter metric",
+			method:         http.MethodPost,
+			metric:         models.NewCounterMetric("testCounter", 42),
+			wantMetric:     models.NewCounterMetric("testCounter", 84),
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:           "invalid method",
+			method:         http.MethodGet,
+			metric:         models.NewCounterMetric("testCounter", 42),
+			expectedStatus: http.StatusMethodNotAllowed,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			res, body := testRequest(t, ts, tt.method, tt.url)
-			defer res.Body.Close()
-			assert.Equal(t, tt.expectedCode, res.StatusCode)
-			if tt.expectedCode == http.StatusOK {
-				assert.Equal(t, tt.expectedValue, body)
+			resp, err := client.R().
+				SetBody(tt.metric).
+				Execute(tt.method, ts.URL+"/update")
+			require.NoError(t, err)
+			assert.Equal(t, tt.expectedStatus, resp.StatusCode())
+
+			// Если ожидаем успех, проверим, что метрика сохранилась
+			if tt.expectedStatus == http.StatusOK && tt.wantMetric != nil {
+				got, exists := service.GetMetric(tt.metric.ID)
+				assert.True(t, exists)
+				assert.Equal(t, tt.wantMetric.ID, got.ID)
+				assert.Equal(t, tt.wantMetric.MType, got.MType)
+				if got.MType == models.Gauge {
+					assert.Equal(t, *tt.wantMetric.Value, *got.Value)
+				} else if got.MType == models.Counter {
+					assert.Equal(t, *tt.wantMetric.Delta, *got.Delta)
+				}
 			}
 		})
 	}
-
 }
 
 func Test_updateCounterMetric(t *testing.T) {
@@ -228,7 +210,7 @@ func Test_updateCounterMetric(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			_, service := setupTestServer(t)
 
-			err := service.updateCounterMetric(tt.metricName, &tt.value)
+			err := service.UpdateCounter(tt.metricName, &tt.value)
 
 			if tt.wantErr {
 				assert.Error(t, err)
@@ -248,11 +230,11 @@ func Test_updateCounterMetric_Accumulation(t *testing.T) {
 	_, s := setupTestServer(t)
 
 	var value1 int64 = 10
-	err := s.updateCounterMetric("testCounter", &value1)
+	err := s.UpdateCounter("testCounter", &value1)
 	assert.NoError(t, err)
 
 	var value2 int64 = 20
-	err = s.updateCounterMetric("testCounter", &value2)
+	err = s.UpdateCounter("testCounter", &value2)
 	assert.NoError(t, err)
 
 	metric, exists := s.GetMetric("testCounter")
@@ -295,7 +277,7 @@ func Test_updateGaugeMetric(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			_, s := setupTestServer(t)
 
-			err := s.updateGaugeMetric(tt.metricName, &tt.delta)
+			err := s.UpdateGauge(tt.metricName, &tt.delta)
 
 			if tt.wantErr {
 				assert.Error(t, err)

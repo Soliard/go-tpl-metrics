@@ -2,18 +2,18 @@ package server
 
 import (
 	"github.com/Soliard/go-tpl-metrics/cmd/server/config"
-	"github.com/Soliard/go-tpl-metrics/internal/logger"
 	"github.com/Soliard/go-tpl-metrics/internal/store"
 	"github.com/Soliard/go-tpl-metrics/models"
+	"go.uber.org/zap"
 )
 
 type MetricsService struct {
 	ServerHost string
 	storage    store.Storage
-	Logger     *logger.Logger
+	Logger     *zap.Logger
 }
 
-func NewMetricsService(storage store.Storage, config *config.Config, logger *logger.Logger) *MetricsService {
+func NewMetricsService(storage store.Storage, config *config.Config, logger *zap.Logger) *MetricsService {
 	return &MetricsService{
 		storage:    storage,
 		ServerHost: config.ServerHost,

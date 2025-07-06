@@ -7,7 +7,7 @@ import (
 )
 
 func TestMemStorage(t *testing.T) {
-	storage := NewStorage()
+	storage := NewMemoryStorage()
 
 	t.Run("gauge operations", func(t *testing.T) {
 		// Test UpdateGauge

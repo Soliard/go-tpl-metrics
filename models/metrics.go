@@ -16,11 +16,27 @@ const (
 // что бы отличать значение "0", от не заданного значения
 // и соответственно не кодировать в структуру.
 type Metrics struct {
-	ID    string   `json:"id"`
-	MType string   `json:"type"`
-	Delta *int64   `json:"delta,omitempty"`
-	Value *float64 `json:"value,omitempty"`
+	ID    string   `json:"id"`              // имя метрики
+	MType string   `json:"type"`            // параметр, принимающий значение gauge или counter
+	Delta *int64   `json:"delta,omitempty"` // значение метрики в случае передачи counter
+	Value *float64 `json:"value,omitempty"` // значение метрики в случае передачи gauge
 	Hash  string   `json:"hash,omitempty"`
+}
+
+func NewGaugeMetric(id string, value float64) *Metrics {
+	return &Metrics{
+		ID:    id,
+		MType: Gauge,
+		Value: &value,
+	}
+}
+
+func NewCounterMetric(id string, delta int64) *Metrics {
+	return &Metrics{
+		ID:    id,
+		MType: Counter,
+		Delta: &delta,
+	}
 }
 
 func (m *Metrics) StringifyDelta() string {
@@ -46,4 +62,11 @@ func (m *Metrics) String() string {
 		m.StringifyValue(),
 		m.StringifyDelta(),
 		m.Hash)
+}
+
+func PFloat(float float64) *float64 {
+	return &float
+}
+func PInt(int int64) *int64 {
+	return &int
 }
