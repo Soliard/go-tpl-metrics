@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net/http"
 	"os"
@@ -29,12 +30,13 @@ func main() {
 		os.Exit(1)
 	}
 	logger.Info("Server config: ", zap.Any("config", config))
-	storage, err := store.NewFileStorage(config.FileStoragePath, config.IsRestoreFromFile)
+	storage, err := store.New(context.TODO(), config)
 	if err != nil {
 		logger.Error("error while creating storage", zap.Error(err))
 		os.Stdout.Sync()
 		os.Exit(1)
 	}
+	logger.Sugar().Infof("storage type: %T", storage)
 
 	service := server.NewMetricsService(storage, config, logger)
 	metricRouter := server.MetricRouter(service)
