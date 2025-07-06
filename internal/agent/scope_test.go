@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -88,13 +89,84 @@ func TestAgent_sendMetric(t *testing.T) {
 				w.WriteHeader(tt.serverStatus)
 			}))
 			defer server.Close()
-
 			agent := setupTestAgent(server.URL)
 			err := agent.sendMetric(tt.metric)
 
 			if tt.wantErr {
 				assert.Error(t, err)
 				assert.Contains(t, err.Error(), tt.wantErrMsg)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestAgent_sendMetricJSON(t *testing.T) {
+	tests := []struct {
+		name         string
+		metric       *models.Metrics
+		serverStatus int
+		wantErr      bool
+	}{
+		{
+			name:         "successful gauge metric",
+			metric:       models.NewGaugeMetric("testMetric", 123.45),
+			serverStatus: http.StatusOK,
+			wantErr:      false,
+		},
+		{
+			name:         "server error",
+			metric:       models.NewGaugeMetric("testMetric", 123.45),
+			serverStatus: http.StatusInternalServerError,
+			wantErr:      true,
+		},
+		{
+			name:         "gauge metric with max float64",
+			metric:       models.NewGaugeMetric("maxFloat", 1.7976931348623157e+308),
+			serverStatus: http.StatusOK,
+			wantErr:      false,
+		},
+		{
+			name:         "gauge metric with min float64",
+			metric:       models.NewGaugeMetric("minFloat", -1.7976931348623157e+308),
+			serverStatus: http.StatusOK,
+			wantErr:      false,
+		},
+		{
+			name:         "counter metric with max int64",
+			metric:       models.NewCounterMetric("maxInt", 9223372036854775807),
+			serverStatus: http.StatusOK,
+			wantErr:      false,
+		},
+		{
+			name:         "counter metric with min int64",
+			metric:       models.NewCounterMetric("minInt", -9223372036854775808),
+			serverStatus: http.StatusOK,
+			wantErr:      false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Простой сервер, который просто возвращает статус
+			server := httptest.NewServer(http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
+				res.WriteHeader(tt.serverStatus)
+
+				// Если успех - возвращаем метрику обратно
+				if tt.serverStatus == http.StatusOK {
+					body, _ := json.Marshal(tt.metric)
+					res.Header().Set("Content-Type", "application/json")
+					res.Write(body)
+				}
+			}))
+			defer server.Close()
+
+			agent := setupTestAgent(server.URL)
+			err := agent.sendMetricJSON(tt.metric)
+
+			if tt.wantErr {
+				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
 			}
