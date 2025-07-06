@@ -1,8 +1,6 @@
 package server
 
 import (
-	"bytes"
-	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -11,6 +9,7 @@ import (
 	"github.com/Soliard/go-tpl-metrics/internal/logger"
 	"github.com/Soliard/go-tpl-metrics/internal/store"
 	"github.com/Soliard/go-tpl-metrics/models"
+	"github.com/go-resty/resty/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -19,9 +18,7 @@ func setupTestServer(t *testing.T) (*httptest.Server, *MetricsService) {
 	storage := store.NewMemoryStorage()
 	config := config.Config{ServerHost: "localhost:8080"}
 	logger, err := logger.New("info")
-	if err != nil {
-		panic(err)
-	}
+	require.NoError(t, err)
 	service := NewMetricsService(storage, &config, logger)
 	router := MetricRouter(service)
 	return httptest.NewServer(router), service
@@ -29,6 +26,7 @@ func setupTestServer(t *testing.T) (*httptest.Server, *MetricsService) {
 
 func TestUpdateViaURLHandler(t *testing.T) {
 	ts, _ := setupTestServer(t)
+	client := resty.New()
 	defer ts.Close()
 	tests := []struct {
 		name           string
@@ -99,18 +97,17 @@ func TestUpdateViaURLHandler(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			req, err := http.NewRequest(tt.method, ts.URL+tt.url, nil)
+			resp, err := client.R().
+				Execute(tt.method, ts.URL+tt.url)
 			require.NoError(t, err)
-			resp, err := ts.Client().Do(req)
-			require.NoError(t, err)
-			defer resp.Body.Close()
-			assert.Equal(t, tt.expectedStatus, resp.StatusCode)
+			assert.Equal(t, tt.expectedStatus, resp.StatusCode())
 		})
 	}
 }
 
 func TestUpdateHandler(t *testing.T) {
 	ts, service := setupTestServer(t)
+	client := resty.New()
 	defer ts.Close()
 	tests := []struct {
 		name           string
@@ -156,19 +153,11 @@ func TestUpdateHandler(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Сериализуем метрику в JSON
-			body, err := json.Marshal(tt.metric)
+			resp, err := client.R().
+				SetBody(tt.metric).
+				Execute(tt.method, ts.URL+"/update")
 			require.NoError(t, err)
-
-			req, err := http.NewRequest(tt.method, ts.URL+"/update", bytes.NewReader(body))
-			require.NoError(t, err)
-			req.Header.Set("Content-Type", "application/json")
-
-			resp, err := ts.Client().Do(req)
-			require.NoError(t, err)
-			defer resp.Body.Close()
-
-			assert.Equal(t, tt.expectedStatus, resp.StatusCode)
+			assert.Equal(t, tt.expectedStatus, resp.StatusCode())
 
 			// Если ожидаем успех, проверим, что метрика сохранилась
 			if tt.expectedStatus == http.StatusOK && tt.wantMetric != nil {

@@ -14,11 +14,9 @@ func (s *MetricsService) ValueHandler(res http.ResponseWriter, req *http.Request
 		http.Error(res, "only application/json content accepting", http.StatusBadRequest)
 		return
 	}
-
-	buf := json.NewDecoder(req.Body)
 	defer req.Body.Close()
 	metric := &models.Metrics{}
-	err := buf.Decode(metric)
+	err := json.NewDecoder(req.Body).Decode(metric)
 	if err != nil {
 		s.Logger.Warn("cant decode body to metric type", zap.Error(err))
 		http.Error(res, "cant decode body to metric type", http.StatusBadRequest)

@@ -1,19 +1,18 @@
 package server
 
 import (
-	"bytes"
-	"encoding/json"
-	"io"
 	"net/http"
 	"testing"
 
 	"github.com/Soliard/go-tpl-metrics/models"
+	"github.com/go-resty/resty/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestValueViaURLHandler(t *testing.T) {
 	ts, _ := setupTestServer(t)
+	client := resty.New()
 	defer ts.Close()
 
 	// Предварительная настройка данных
@@ -26,12 +25,10 @@ func TestValueViaURLHandler(t *testing.T) {
 	}
 
 	for _, tt := range updateTests {
-		req, err := http.NewRequest(tt.method, ts.URL+tt.url, nil)
+		resp, err := client.R().
+			Execute(tt.method, ts.URL+tt.url)
 		require.NoError(t, err)
-		resp, err := ts.Client().Do(req)
-		require.NoError(t, err)
-		defer resp.Body.Close()
-		assert.Equal(t, http.StatusOK, resp.StatusCode)
+		assert.Equal(t, http.StatusOK, resp.StatusCode())
 	}
 	// Тестирование получения значений
 	tests := []struct {
@@ -72,17 +69,13 @@ func TestValueViaURLHandler(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			req, err := http.NewRequest(tt.method, ts.URL+tt.url, nil)
+			resp, err := client.R().
+				Execute(tt.method, ts.URL+tt.url)
 			require.NoError(t, err)
-			resp, err := ts.Client().Do(req)
-			require.NoError(t, err)
-			defer resp.Body.Close()
-			body, err := io.ReadAll(resp.Body)
-			assert.NoError(t, err)
 
-			assert.Equal(t, tt.expectedCode, resp.StatusCode)
+			assert.Equal(t, tt.expectedCode, resp.StatusCode())
 			if tt.expectedCode == http.StatusOK {
-				assert.Equal(t, tt.expectedValue, string(body))
+				assert.Equal(t, tt.expectedValue, string(resp.Body()))
 			}
 		})
 	}
@@ -92,6 +85,7 @@ func TestValueViaURLHandler(t *testing.T) {
 func TestValueHandler(t *testing.T) {
 	ts, s := setupTestServer(t)
 	defer ts.Close()
+	client := resty.New()
 
 	// Предварительная настройка данных
 	s.UpdateCounter("counter", models.PInt(3))
@@ -120,23 +114,19 @@ func TestValueHandler(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			body, err := json.Marshal(tt.metric)
-			assert.NoError(t, err)
-			req, err := http.NewRequest(http.MethodPost, ts.URL+`/value/`, bytes.NewReader(body))
+			returnedMetric := models.Metrics{}
+			resp, err := client.R().
+				SetBody(tt.metric).
+				SetResult(&returnedMetric).
+				Execute(http.MethodPost, ts.URL+`/value/`)
+
 			require.NoError(t, err)
-			req.Header.Set("Content-type", "application/json")
-			resp, err := ts.Client().Do(req)
-			require.NoError(t, err)
-			defer resp.Body.Close()
-			body, err = io.ReadAll(resp.Body)
-			assert.NoError(t, err)
-			metric := models.Metrics{}
-			err = json.Unmarshal(body, &metric)
 			if tt.wantMetric != nil {
+				assert.Equal(t, http.StatusOK, resp.StatusCode())
 				assert.NoError(t, err)
-				assert.Equal(t, *tt.wantMetric, metric)
+				assert.Equal(t, *tt.wantMetric, returnedMetric)
 			} else {
-				assert.Error(t, err)
+				assert.NotEqual(t, http.StatusOK, resp.StatusCode())
 			}
 
 		})

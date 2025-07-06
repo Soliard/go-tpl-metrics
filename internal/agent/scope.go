@@ -70,10 +70,12 @@ func (a *Agent) sendMetricJSON(metric *models.Metrics) error {
 	// resty позаботится о асептинге gzip и о расшифровке тела ответа из gzip
 	req.Header.Set("Accept", "application/json")
 	req.SetBody(compressed)
+
 	res, err := req.Post(url)
 	if err != nil {
 		a.Logger.Error("error while send metric as json to server",
-			zap.Any("metric", metric))
+			zap.Any("metric", metric),
+			zap.Error(err))
 		return err
 	}
 
