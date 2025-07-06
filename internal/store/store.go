@@ -1,16 +1,17 @@
 package store
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/Soliard/go-tpl-metrics/models"
 )
 
 type Storage interface {
-	UpdateGauge(name string, value *float64) error
-	UpdateCounter(name string, value *int64) error
-	GetMetric(name string) (metric *models.Metrics, exists bool)
-	GetAllMetrics() []models.Metrics
+	UpdateGauge(ctx context.Context, name string, value *float64) error
+	UpdateCounter(ctx context.Context, name string, value *int64) error
+	GetMetric(ctx context.Context, name string) (metric *models.Metrics, exists bool)
+	GetAllMetrics(ctx context.Context) []models.Metrics
 }
 
 type memStorage struct {
@@ -23,7 +24,7 @@ func NewMemoryStorage() Storage {
 	}
 }
 
-func (s *memStorage) UpdateCounter(name string, value *int64) error {
+func (s *memStorage) UpdateCounter(ctx context.Context, name string, value *int64) error {
 	if name == "" {
 		return fmt.Errorf("metric name cannot be empty")
 	}
@@ -45,7 +46,7 @@ func (s *memStorage) UpdateCounter(name string, value *int64) error {
 	return nil
 }
 
-func (s *memStorage) UpdateGauge(name string, value *float64) error {
+func (s *memStorage) UpdateGauge(ctx context.Context, name string, value *float64) error {
 	if name == "" {
 		return fmt.Errorf("metric name cannot be empty")
 	}
@@ -64,12 +65,12 @@ func (s *memStorage) UpdateGauge(name string, value *float64) error {
 	return nil
 }
 
-func (s *memStorage) GetMetric(name string) (metric *models.Metrics, exists bool) {
+func (s *memStorage) GetMetric(ctx context.Context, name string) (metric *models.Metrics, exists bool) {
 	metric, ok := s.metrics[name]
 	return metric, ok
 }
 
-func (s *memStorage) GetAllMetrics() []models.Metrics {
+func (s *memStorage) GetAllMetrics(ctx context.Context) []models.Metrics {
 	metrics := make([]models.Metrics, len(s.metrics))
 	idx := 0
 	for _, m := range s.metrics {

@@ -11,7 +11,8 @@ import (
 )
 
 func (s *MetricsService) MetricsPageHandler(res http.ResponseWriter, req *http.Request) {
-	logger := logger.LoggerFromCtx(req.Context(), s.Logger)
+	ctx := req.Context()
+	logger := logger.LoggerFromCtx(ctx, s.Logger)
 	logger.Info("recieved request for metrics page handler")
 	tmpl, err := template.New("metrics").Parse(templates.MetricsTemplate)
 
@@ -20,7 +21,7 @@ func (s *MetricsService) MetricsPageHandler(res http.ResponseWriter, req *http.R
 		return
 	}
 
-	data := s.storage.GetAllMetrics()
+	data := s.storage.GetAllMetrics(ctx)
 
 	sort.Slice(data, func(i, j int) bool {
 		return data[i].ID < data[j].ID

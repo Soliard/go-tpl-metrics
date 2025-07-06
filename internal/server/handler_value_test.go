@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"net/http"
 	"testing"
 
@@ -85,11 +86,12 @@ func TestValueViaURLHandler(t *testing.T) {
 func TestValueHandler(t *testing.T) {
 	ts, s := setupTestServer(t)
 	defer ts.Close()
+	ctx := context.Background()
 	client := resty.New()
 
 	// Предварительная настройка данных
-	s.UpdateCounter("counter", models.PInt(3))
-	s.UpdateGauge("gauge", models.PFloat(22.1))
+	s.UpdateCounter(ctx, "counter", models.PInt(3))
+	s.UpdateGauge(ctx, "gauge", models.PFloat(22.1))
 
 	tests := []struct {
 		name       string

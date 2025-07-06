@@ -9,6 +9,7 @@ import (
 )
 
 func (s *MetricsService) ValueHandler(res http.ResponseWriter, req *http.Request) {
+	ctx := req.Context()
 	res.Header().Set("Content-Type", "application/json")
 	if req.Header.Get("Content-type") != "application/json" {
 		http.Error(res, "only application/json content accepting", http.StatusBadRequest)
@@ -22,7 +23,7 @@ func (s *MetricsService) ValueHandler(res http.ResponseWriter, req *http.Request
 		http.Error(res, "cant decode body to metric type", http.StatusBadRequest)
 	}
 
-	retMetric, ok := s.GetMetric(metric.ID)
+	retMetric, ok := s.GetMetric(ctx, metric.ID)
 	if !ok {
 		http.Error(res, `metric with this name doesnt exists`, http.StatusNotFound)
 		return
@@ -42,13 +43,14 @@ func (s *MetricsService) ValueHandler(res http.ResponseWriter, req *http.Request
 }
 
 func (s *MetricsService) ValueViaURLHandler(res http.ResponseWriter, req *http.Request) {
+	ctx := req.Context()
 	m := parseMetricURL(req)
 
 	if m.MType == "" || m.ID == "" {
 		http.Error(res, `type or name cannot be empty`, http.StatusBadRequest)
 		return
 	}
-	if metric, exists := s.GetMetric(m.ID); exists {
+	if metric, exists := s.GetMetric(ctx, m.ID); exists {
 		if metric.MType == m.MType {
 			if m.MType == models.Counter {
 				res.Write([]byte(metric.StringifyDelta()))
