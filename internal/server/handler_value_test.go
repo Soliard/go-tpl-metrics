@@ -90,8 +90,8 @@ func TestValueHandler(t *testing.T) {
 	client := resty.New()
 
 	// Предварительная настройка данных
-	s.UpdateCounter(ctx, "counter", models.PInt(3))
-	s.UpdateGauge(ctx, "gauge", models.PFloat(22.1))
+	s.UpdateMetric(ctx, models.NewCounterMetric("counter", 3))
+	s.UpdateMetric(ctx, models.NewGaugeMetric("gauge", 22.1))
 
 	tests := []struct {
 		name       string

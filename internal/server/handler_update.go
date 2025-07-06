@@ -34,24 +34,16 @@ func (s *MetricsService) UpdateHandler(res http.ResponseWriter, req *http.Reques
 		return
 	}
 
-	switch metric.MType {
-	case models.Gauge:
-		err := s.UpdateGauge(ctx, metric.ID, metric.Value)
-		if err != nil {
-			logger.Error("error while update gauge metric", zap.Error(err), zap.Any("recieved metric", metric))
-			http.Error(res, err.Error(), http.StatusInternalServerError)
-			return
-		}
-	case models.Counter:
-		err := s.UpdateCounter(ctx, metric.ID, metric.Delta)
-		if err != nil {
-			logger.Error("error while update counter metric", zap.Error(err), zap.Any("recieved metric", metric))
-			http.Error(res, err.Error(), http.StatusInternalServerError)
-			return
-		}
-	default:
-		logger.Warn("recieved unknown metric type to update", zap.Any("recieved metric", metric))
+	if metric.MType != models.Gauge && metric.MType != models.Counter {
+		logger.Warn(`invalid metric type`, zap.Any("metric", metric))
 		http.Error(res, `invalid metric type`, http.StatusBadRequest)
+		return
+	}
+
+	err = s.UpdateMetric(ctx, metric)
+	if err != nil {
+		logger.Error("cant update metric", zap.Any("metric", metric))
+		http.Error(res, "cant update metric", http.StatusBadRequest)
 		return
 	}
 
@@ -81,36 +73,27 @@ func (s *MetricsService) UpdateHandler(res http.ResponseWriter, req *http.Reques
 
 func (s *MetricsService) UpdateViaURLHandler(res http.ResponseWriter, req *http.Request) {
 	ctx := req.Context()
+	logger := logger.LoggerFromCtx(ctx, s.Logger)
 	metric := parseMetricURL(req)
-
 	if metric.ID == "" {
 		http.Error(res, `metric name cannot be empty`, http.StatusNotFound)
 		return
 	}
-
 	if metric.Delta == nil && metric.Value == nil {
 		http.Error(res, "empty value", http.StatusBadRequest)
 		return
 	}
-
-	switch metric.MType {
-	case models.Gauge:
-		err := s.UpdateGauge(ctx, metric.ID, metric.Value)
-		if err != nil {
-			http.Error(res, err.Error(), http.StatusBadRequest)
-			return
-		}
-	case models.Counter:
-		err := s.UpdateCounter(ctx, metric.ID, metric.Delta)
-		if err != nil {
-			http.Error(res, err.Error(), http.StatusBadRequest)
-			return
-		}
-	default:
+	if metric.MType != models.Gauge && metric.MType != models.Counter {
 		http.Error(res, `invalid metric type`, http.StatusBadRequest)
 		return
 	}
 
+	err := s.UpdateMetric(ctx, &metric)
+	if err != nil {
+		logger.Error("cant update metric", zap.Any("metric", metric))
+		http.Error(res, "cant update metric", http.StatusBadRequest)
+		return
+	}
 	res.WriteHeader(http.StatusOK)
 }
 

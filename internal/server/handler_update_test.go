@@ -212,7 +212,7 @@ func Test_updateCounterMetric(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			_, service := setupTestServer(t)
 			ctx := context.Background()
-			err := service.UpdateCounter(ctx, tt.metricName, &tt.value)
+			err := service.UpdateMetric(ctx, models.NewCounterMetric(tt.metricName, tt.value))
 
 			if tt.wantErr {
 				assert.Error(t, err)
@@ -232,12 +232,10 @@ func Test_updateCounterMetric_Accumulation(t *testing.T) {
 	ctx := context.Background()
 	_, s := setupTestServer(t)
 
-	var value1 int64 = 10
-	err := s.UpdateCounter(ctx, "testCounter", &value1)
+	err := s.UpdateMetric(ctx, models.NewCounterMetric("testCounter", 10))
 	assert.NoError(t, err)
 
-	var value2 int64 = 20
-	err = s.UpdateCounter(ctx, "testCounter", &value2)
+	err = s.UpdateMetric(ctx, models.NewCounterMetric("testCounter", 20))
 	assert.NoError(t, err)
 
 	metric, exists := s.GetMetric(ctx, "testCounter")
@@ -281,7 +279,7 @@ func Test_updateGaugeMetric(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			_, s := setupTestServer(t)
 			ctx := context.Background()
-			err := s.UpdateGauge(ctx, tt.metricName, &tt.delta)
+			err := s.UpdateMetric(ctx, models.NewGaugeMetric(tt.metricName, tt.delta))
 
 			if tt.wantErr {
 				assert.Error(t, err)

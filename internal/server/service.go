@@ -23,19 +23,14 @@ func NewMetricsService(storage store.Storage, config *config.Config, logger *zap
 	}
 }
 
-func (s *MetricsService) UpdateCounter(ctx context.Context, name string, value *int64) error {
-	err := s.storage.UpdateCounter(ctx, name, value)
+func (s *MetricsService) UpdateMetric(ctx context.Context, metric *models.Metrics) error {
+	err := s.storage.UpdateMetric(ctx, metric)
 	return err
 }
 
-func (s *MetricsService) UpdateGauge(ctx context.Context, name string, value *float64) error {
-	err := s.storage.UpdateGauge(ctx, name, value)
-	return err
-}
-
-func (s *MetricsService) GetMetric(ctx context.Context, name string) (metric *models.Metrics, exists bool) {
-	metric, exists = s.storage.GetMetric(ctx, name)
-	return
+func (s *MetricsService) GetMetric(ctx context.Context, name string) (*models.Metrics, bool) {
+	metric, exists := s.storage.GetMetric(ctx, name)
+	return metric, exists
 }
 
 func (s *MetricsService) GetAllMetrics(ctx context.Context) []models.Metrics {

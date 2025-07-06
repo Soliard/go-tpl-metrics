@@ -32,20 +32,8 @@ func NewFileStorage(filePath string, isRestore bool) (Storage, error) {
 	}, nil
 }
 
-func (s *fileStorage) UpdateCounter(ctx context.Context, name string, value *int64) error {
-	err := s.memory.UpdateCounter(ctx, name, value)
-	if err != nil {
-		return err
-	}
-	err = s.saveMemoryToFile()
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func (s *fileStorage) UpdateGauge(ctx context.Context, name string, value *float64) error {
-	err := s.memory.UpdateGauge(ctx, name, value)
+func (s *fileStorage) UpdateMetric(ctx context.Context, metric *models.Metrics) error {
+	err := s.memory.UpdateMetric(ctx, metric)
 	if err != nil {
 		return err
 	}
