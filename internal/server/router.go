@@ -22,6 +22,7 @@ func MetricRouter(s *MetricsService) chi.Router {
 		r.Post("/", s.ValueHandler)
 		r.Get("/{type}/{name}", s.ValueViaURLHandler)
 	})
+	r.Get("/ping", s.PingHandler)
 
 	return r
 }
