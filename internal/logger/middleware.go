@@ -1,10 +1,9 @@
-package server
+package logger
 
 import (
 	"net/http"
 	"time"
 
-	"github.com/Soliard/go-tpl-metrics/internal/logger"
 	"go.uber.org/zap"
 )
 
@@ -35,32 +34,34 @@ func (r *loggingResponseWriter) WriteHeader(statusCode int) {
 	r.responseData.status = statusCode // захватываем код статуса
 }
 
-func (s *MetricsService) LoggingMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		start := time.Now()
-		lw := loggingResponseWriter{
-			ResponseWriter: w, // встраиваем оригинальный http.ResponseWriter
-			responseData: &responseData{
-				status: 0,
-				size:   0,
-			},
-		}
-		ctx := r.Context()
-		loggerFromCtx := logger.LoggerFromCtx(ctx, s.Logger)
+func LoggingMiddleware(log *zap.Logger) func(next http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			start := time.Now()
+			lw := loggingResponseWriter{
+				ResponseWriter: w, // встраиваем оригинальный http.ResponseWriter
+				responseData: &responseData{
+					status: 0,
+					size:   0,
+				},
+			}
+			ctx := r.Context()
+			loggerFromCtx := LoggerFromCtx(ctx, log)
 
-		loggerFromCtx.Info("request info",
-			zap.String("url", r.URL.String()),
-			zap.String("method", r.Method),
-		)
+			loggerFromCtx.Info("request info",
+				zap.String("url", r.URL.String()),
+				zap.String("method", r.Method),
+			)
 
-		ctx = logger.CtxWithLogger(ctx, loggerFromCtx)
-		next.ServeHTTP(&lw, r.WithContext(ctx))
-		duration := time.Since(start)
+			ctx = CtxWithLogger(ctx, loggerFromCtx)
+			next.ServeHTTP(&lw, r.WithContext(ctx))
+			duration := time.Since(start)
 
-		loggerFromCtx.Info("response info",
-			zap.Duration("duration", duration),
-			zap.Int("size", lw.responseData.size),
-			zap.Int("status", lw.responseData.status),
-		)
-	})
+			loggerFromCtx.Info("response info",
+				zap.Duration("duration", duration),
+				zap.Int("size", lw.responseData.size),
+				zap.Int("status", lw.responseData.status),
+			)
+		})
+	}
 }
