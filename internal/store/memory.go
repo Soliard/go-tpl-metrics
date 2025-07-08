@@ -4,9 +4,7 @@ import (
 	"context"
 	"errors"
 
-	"github.com/Soliard/go-tpl-metrics/internal/logger"
 	"github.com/Soliard/go-tpl-metrics/models"
-	"go.uber.org/zap"
 )
 
 type memStorage struct {
@@ -20,39 +18,27 @@ func NewMemoryStorage() Storage {
 }
 
 func (s *memStorage) UpdateMetric(ctx context.Context, metric *models.Metrics) error {
-	logger := logger.LoggerFromCtx(ctx, zap.Must(zap.NewProduction()))
 	if metric == nil {
-		logger.Warn("recieved nil metric to update")
 		return errors.New("metric cannot be empty")
 	}
 	if metric.ID == "" {
-		logger.Warn("recieved mitric with empty id to update")
 		return errors.New("metric id cannot be empty")
 	}
 
 	if existed, ok := s.GetMetric(ctx, metric.ID); ok {
 		if existed.MType != metric.MType {
-			logger.Error("trying to update existed metric with same id, but new mtyper",
-				zap.Any("existed", existed),
-				zap.Any("new", metric))
-			return errors.New("trying to update existed metric with same id, but new mtyper")
+			return errors.New("trying to update existed metric with same id, but new mtype")
 		}
 
 		switch metric.MType {
 		case models.Gauge:
 			{
 				*existed.Value = *metric.Value
-				logger.Info("updated gauge metric",
-					zap.Any("metric before", existed),
-					zap.Any("metric after", metric))
 				return nil
 			}
 		case models.Counter:
 			{
 				*existed.Delta += *metric.Delta
-				logger.Info("updated counter metric",
-					zap.Any("metric before", existed),
-					zap.Any("metric after", metric))
 				return nil
 			}
 
@@ -60,7 +46,6 @@ func (s *memStorage) UpdateMetric(ctx context.Context, metric *models.Metrics) e
 	}
 
 	s.metrics[metric.ID] = metric
-	logger.Info("created new metric", zap.Any("metric", metric))
 	return nil
 }
 

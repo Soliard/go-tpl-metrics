@@ -12,24 +12,20 @@ import (
 
 func main() {
 
+	defer os.Stdout.Sync()
 	config, err := config.New()
 	if err != nil {
-		log.Printf("cannot create config for agent %v", err)
-		os.Stdout.Sync()
-		os.Exit(1)
+		log.Fatalf("cannot create config for agent %v", err)
 	}
 
 	logger, err := logger.New(config.LogLevel)
-
 	if err != nil {
-		log.Printf("failed to initialize logger: %v", err)
-		os.Stdout.Sync()
-		os.Exit(1)
+		log.Fatalf("failed to initialize logger: %v", err)
 	}
-	logger.Info("Agent config: ", zap.Any("config", config))
+	defer logger.Sync()
+	logger.Info("agent config: ", zap.Any("config", config))
 
 	agent := agent.New(config, logger)
-	logger.Info("Agent works with service on", zap.String("ServerHost", config.ServerHost))
-	os.Stdout.Sync()
+	logger.Info("agent works with service on", zap.String("serverhost", config.ServerHost))
 	agent.Run()
 }

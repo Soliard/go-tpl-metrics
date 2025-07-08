@@ -35,5 +35,4 @@ func (s *MetricsService) MetricsPageHandler(res http.ResponseWriter, req *http.R
 	res.Header().Set("Content-Type", "text/html; charset=utf-8")
 	res.WriteHeader(http.StatusOK)
 	res.Write(bufTemplate.Bytes())
-
 }
