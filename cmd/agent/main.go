@@ -11,7 +11,6 @@ import (
 )
 
 func main() {
-
 	defer os.Stdout.Sync()
 	config, err := config.New()
 	if err != nil {

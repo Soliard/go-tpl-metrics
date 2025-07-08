@@ -3,12 +3,14 @@ package server
 import (
 	"net/http"
 
+	"github.com/Soliard/go-tpl-metrics/internal/compressor"
+	"github.com/Soliard/go-tpl-metrics/internal/logger"
 	"github.com/go-chi/chi/v5"
 )
 
 func MetricRouter(s *MetricsService) chi.Router {
 	r := chi.NewRouter()
-	r.Use(s.LoggingMiddleware, s.GzipMiddleware)
+	r.Use(logger.LoggingMiddleware(s.Logger), compressor.GzipMiddleware(s.Logger))
 	r.Get("/", s.MetricsPageHandler)
 	r.Route("/update", func(r chi.Router) {
 		r.Post("/", s.UpdateHandler)
