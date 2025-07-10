@@ -2,16 +2,19 @@ package store
 
 import (
 	"context"
+	"errors"
 
 	"github.com/Soliard/go-tpl-metrics/cmd/server/config"
 	"github.com/Soliard/go-tpl-metrics/models"
 )
 
 type Storage interface {
-	UpdateMetric(ctx context.Context, metric *models.Metrics) error
-	GetMetric(ctx context.Context, name string) (metric *models.Metrics, exists bool)
-	GetAllMetrics(ctx context.Context) []models.Metrics
+	UpdateMetric(ctx context.Context, metric *models.Metrics) (*models.Metrics, error)
+	GetMetric(ctx context.Context, name string) (*models.Metrics, error)
+	GetAllMetrics(ctx context.Context) ([]models.Metrics, error)
 }
+
+var ErrNotFound = errors.New("not found")
 
 func New(ctx context.Context, config *config.Config) (Storage, error) {
 	if config.FileStoragePath != "" {

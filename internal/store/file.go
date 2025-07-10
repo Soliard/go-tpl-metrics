@@ -32,23 +32,23 @@ func NewFileStorage(filePath string, isRestore bool) (Storage, error) {
 	}, nil
 }
 
-func (s *fileStorage) UpdateMetric(ctx context.Context, metric *models.Metrics) error {
-	err := s.memory.UpdateMetric(ctx, metric)
+func (s *fileStorage) UpdateMetric(ctx context.Context, metric *models.Metrics) (*models.Metrics, error) {
+	m, err := s.memory.UpdateMetric(ctx, metric)
 	if err != nil {
-		return err
+		return m, err
 	}
 	err = s.saveMemoryToFile()
 	if err != nil {
-		return err
+		return m, err
 	}
-	return nil
+	return m, nil
 }
 
-func (s *fileStorage) GetMetric(ctx context.Context, name string) (metric *models.Metrics, exists bool) {
+func (s *fileStorage) GetMetric(ctx context.Context, name string) (*models.Metrics, error) {
 	return s.memory.GetMetric(ctx, name)
 }
 
-func (s *fileStorage) GetAllMetrics(ctx context.Context) []models.Metrics {
+func (s *fileStorage) GetAllMetrics(ctx context.Context) ([]models.Metrics, error) {
 	return s.memory.GetAllMetrics(ctx)
 }
 

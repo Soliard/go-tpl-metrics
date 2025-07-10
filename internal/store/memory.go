@@ -17,49 +17,60 @@ func NewMemoryStorage() Storage {
 	}
 }
 
-func (s *memStorage) UpdateMetric(ctx context.Context, metric *models.Metrics) error {
+func (s *memStorage) UpdateMetric(ctx context.Context, metric *models.Metrics) (*models.Metrics, error) {
 	if metric == nil {
-		return errors.New("metric cannot be empty")
+		return nil, errors.New("metric cannot be empty")
 	}
 	if metric.ID == "" {
-		return errors.New("metric id cannot be empty")
+		return nil, errors.New("metric id cannot be empty")
 	}
 
-	if existed, ok := s.GetMetric(ctx, metric.ID); ok {
-		if existed.MType != metric.MType {
-			return errors.New("trying to update existed metric with same id, but new mtype")
+	existed, err := s.GetMetric(ctx, metric.ID)
+	if err != nil {
+		if err == ErrNotFound {
+			// creating new metric
+			s.metrics[metric.ID] = metric
+			return metric, nil
 		}
-
-		switch metric.MType {
-		case models.Gauge:
-			{
-				*existed.Value = *metric.Value
-				return nil
-			}
-		case models.Counter:
-			{
-				*existed.Delta += *metric.Delta
-				return nil
-			}
-
-		}
+		return nil, err
 	}
 
-	s.metrics[metric.ID] = metric
-	return nil
+	if existed.MType != metric.MType {
+		return nil, errors.New("trying to update existed metric with same id, but new mtype")
+	}
+
+	// updating existing metric
+	switch metric.MType {
+	case models.Gauge:
+		{
+			*existed.Value = *metric.Value
+		}
+	case models.Counter:
+		{
+			*existed.Delta += *metric.Delta
+		}
+	default:
+		{
+			return nil, errors.New("provided not supported metric type")
+		}
+	}
+	return existed, nil
+
 }
 
-func (s *memStorage) GetMetric(ctx context.Context, name string) (metric *models.Metrics, exists bool) {
-	metric, ok := s.metrics[name]
-	return metric, ok
+func (s *memStorage) GetMetric(ctx context.Context, name string) (*models.Metrics, error) {
+	if metric, ok := s.metrics[name]; ok {
+		return metric, nil
+	}
+	return nil, ErrNotFound
 }
 
-func (s *memStorage) GetAllMetrics(ctx context.Context) []models.Metrics {
+func (s *memStorage) GetAllMetrics(ctx context.Context) ([]models.Metrics, error) {
 	metrics := make([]models.Metrics, len(s.metrics))
 	idx := 0
 	for _, m := range s.metrics {
 		metrics[idx] = *m
 		idx++
 	}
-	return metrics
+	return metrics, nil
 }

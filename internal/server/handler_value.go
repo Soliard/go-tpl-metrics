@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/Soliard/go-tpl-metrics/internal/store"
 	"github.com/Soliard/go-tpl-metrics/models"
 	"go.uber.org/zap"
 )
@@ -23,10 +24,15 @@ func (s *MetricsService) ValueHandler(res http.ResponseWriter, req *http.Request
 		http.Error(res, "cant decode body to metric type", http.StatusBadRequest)
 	}
 
-	retMetric, ok := s.GetMetric(ctx, metric.ID)
-	if !ok {
-		http.Error(res, `metric with this name doesnt exists`, http.StatusNotFound)
+	retMetric, err := s.GetMetric(ctx, metric.ID)
+	if err != nil {
+		if err == store.ErrNotFound {
+			http.Error(res, `metric with this name doesnt exists`, http.StatusNotFound)
+			return
+		}
+		http.Error(res, `error while getting metric`, http.StatusInternalServerError)
 		return
+
 	}
 	retBody, err := json.Marshal(retMetric)
 	if err != nil {
@@ -50,21 +56,27 @@ func (s *MetricsService) ValueViaURLHandler(res http.ResponseWriter, req *http.R
 		http.Error(res, `type or name cannot be empty`, http.StatusBadRequest)
 		return
 	}
-	if metric, exists := s.GetMetric(ctx, m.ID); exists {
-		if metric.MType == m.MType {
-			if m.MType == models.Counter {
-				res.Write([]byte(metric.StringifyDelta()))
-			} else if metric.MType == models.Gauge {
-				res.Write([]byte(metric.StringifyValue()))
-			}
-		} else {
-			http.Error(res, `invalid metric type`, http.StatusNotFound)
+	metric, err := s.GetMetric(ctx, m.ID)
+	if err != nil {
+		if err == store.ErrNotFound {
+			http.Error(res, `metric with this name doesnt exists`, http.StatusNotFound)
 			return
 		}
-	} else {
-		http.Error(res, `metric with this name doesnt exists`, http.StatusNotFound)
+		http.Error(res, `error while getting metric`, http.StatusInternalServerError)
 		return
 	}
+
+	if metric.MType != m.MType {
+		http.Error(res, `invalid metric type`, http.StatusNotFound)
+		return
+	}
+	if m.MType == models.Counter {
+		res.Write([]byte(metric.StringifyDelta()))
+	}
+	if metric.MType == models.Gauge {
+		res.Write([]byte(metric.StringifyValue()))
+	}
+
 	res.Header().Set("Content-Type", "plain/text; charset=utf-8")
 	res.WriteHeader(http.StatusOK)
 }

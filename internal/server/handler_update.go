@@ -40,20 +40,12 @@ func (s *MetricsService) UpdateHandler(res http.ResponseWriter, req *http.Reques
 		return
 	}
 
-	err = s.UpdateMetric(ctx, metric)
+	retMetric, err := s.UpdateMetric(ctx, metric)
 	if err != nil {
-		logger.Error("cant update metric", zap.Any("metric", metric))
+		logger.Error("cant update metric",
+			zap.Any("metric", metric),
+			zap.Error(err))
 		http.Error(res, "cant update metric", http.StatusBadRequest)
-		return
-	}
-
-	retMetric, ok := s.GetMetric(ctx, metric.ID)
-	if !ok {
-		logger.Error("cant get metric that was updated right now",
-			zap.Error(err),
-			zap.String("metric id", metric.ID),
-			zap.Any("recieved metric", metric))
-		http.Error(res, "cant get metric that was updated right now", http.StatusInternalServerError)
 		return
 	}
 
@@ -88,9 +80,11 @@ func (s *MetricsService) UpdateViaURLHandler(res http.ResponseWriter, req *http.
 		return
 	}
 
-	err := s.UpdateMetric(ctx, &metric)
+	_, err := s.UpdateMetric(ctx, &metric)
 	if err != nil {
-		logger.Error("cant update metric", zap.Any("metric", metric))
+		logger.Error("cant update metric",
+			zap.Any("metric", metric),
+			zap.Error(err))
 		http.Error(res, "cant update metric", http.StatusBadRequest)
 		return
 	}

@@ -8,6 +8,7 @@ import (
 
 	"github.com/Soliard/go-tpl-metrics/internal/logger"
 	"github.com/Soliard/go-tpl-metrics/internal/server/templates"
+	"go.uber.org/zap"
 )
 
 func (s *MetricsService) MetricsPageHandler(res http.ResponseWriter, req *http.Request) {
@@ -21,7 +22,11 @@ func (s *MetricsService) MetricsPageHandler(res http.ResponseWriter, req *http.R
 		return
 	}
 
-	data := s.storage.GetAllMetrics(ctx)
+	data, err := s.storage.GetAllMetrics(ctx)
+	if err != nil {
+		logger.Error("error while getting all metrics for page table", zap.Error(err))
+		http.Error(res, "somthing went wrong", http.StatusInternalServerError)
+	}
 
 	sort.Slice(data, func(i, j int) bool {
 		return data[i].ID < data[j].ID

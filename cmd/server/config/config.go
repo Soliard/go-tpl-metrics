@@ -23,7 +23,7 @@ func New() (*Config, error) {
 	flag.IntVar(&config.StoreIntervalSeconds, "i", 0, "store data interval in seconds") //not used, storing every update
 	flag.StringVar(&config.FileStoragePath, "f", "", "file storage name")               //FileStorage\\default.txt
 	flag.BoolVar(&config.IsRestoreFromFile, "r", false, "is need to restore data from existed f file")
-	flag.StringVar(&config.DatabaseDSN, "d", "", "database connection string")
+	flag.StringVar(&config.DatabaseDSN, "d", "", "database connection string") //postgres://postgres:postgres@localhost:5432/gotplmetrics
 	flag.Parse()
 
 	err := env.Parse(config)
