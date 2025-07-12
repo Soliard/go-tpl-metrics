@@ -55,7 +55,7 @@ func (s *DatabaseStorage) UpdateMetrics(ctx context.Context, metrics []*models.M
 	VALUES (:id, :type, :value, :delta, :hash)
 	ON CONFLICT (id) DO UPDATE SET
 		value = EXCLUDED.value,
-		delta = EXCLUDED.delta,
+		delta = metrics.delta + EXCLUDED.delta,
 		hash = EXCLUDED.hash
 `
 	tx, err := s.db.BeginTxx(ctx, nil)
@@ -107,15 +107,25 @@ func (s *DatabaseStorage) UpdateMetric(ctx context.Context, metric *models.Metri
 	if existed.MType != metric.MType {
 		return nil, errors.New("trying to update existed metric with same id, but new mtype")
 	}
-	_, err = s.db.ExecContext(ctx, `
-		UPDATE 
-			metrics
-		SET
-			value = $1,
-			delta = $2
-		WHERE
-			id = $3
-	`, metric.Value, metric.Delta, metric.ID)
+	if metric.MType == models.Counter {
+		_, err = s.db.ExecContext(ctx, `
+			UPDATE 
+				metrics
+			SET
+				delta = delta + $1
+			WHERE
+				id = $2
+		`, metric.Delta, metric.ID)
+	} else {
+		_, err = s.db.ExecContext(ctx, `
+			UPDATE 
+				metrics
+			SET
+				value = $1
+			WHERE
+				id = $2
+		`, metric.Value, metric.ID)
+	}
 	if err != nil {
 		return nil, err
 	}
