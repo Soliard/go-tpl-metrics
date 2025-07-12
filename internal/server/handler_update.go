@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"github.com/Soliard/go-tpl-metrics/internal/logger"
+	"github.com/Soliard/go-tpl-metrics/internal/store"
 	"github.com/Soliard/go-tpl-metrics/models"
 	"github.com/go-chi/chi/v5"
 	"go.uber.org/zap"
@@ -27,25 +28,20 @@ func (s *MetricsService) UpdateHandler(res http.ResponseWriter, req *http.Reques
 		http.Error(res, "cant decode body to metric type", http.StatusBadRequest)
 		return
 	}
-
-	if metric.ID == "" {
-		logger.Warn("update handler recieved metric with empty id")
-		http.Error(res, `metric id cannot be empty`, http.StatusNotFound)
-		return
-	}
-
-	if metric.MType != models.Gauge && metric.MType != models.Counter {
-		logger.Warn(`invalid metric type`, zap.Any("metric", metric))
-		http.Error(res, `invalid metric type`, http.StatusBadRequest)
-		return
-	}
-
 	retMetric, err := s.UpdateMetric(ctx, metric)
 	if err != nil {
+		if err == store.ErrNotFound {
+			http.Error(res, `metric is not found or id is empty`, http.StatusNotFound)
+			return
+		}
+		if err == store.ErrInvalidMetricReceived {
+			http.Error(res, "invalid metric recieved", http.StatusBadRequest)
+			return
+		}
 		logger.Error("cant update metric",
 			zap.Any("metric", metric),
 			zap.Error(err))
-		http.Error(res, "cant update metric", http.StatusBadRequest)
+		http.Error(res, "cant update metric", http.StatusInternalServerError)
 		return
 	}
 
@@ -67,25 +63,21 @@ func (s *MetricsService) UpdateViaURLHandler(res http.ResponseWriter, req *http.
 	ctx := req.Context()
 	logger := logger.LoggerFromCtx(ctx, s.Logger)
 	metric := parseMetricURL(req)
-	if metric.ID == "" {
-		http.Error(res, `metric name cannot be empty`, http.StatusNotFound)
-		return
-	}
-	if metric.Delta == nil && metric.Value == nil {
-		http.Error(res, "empty value", http.StatusBadRequest)
-		return
-	}
-	if metric.MType != models.Gauge && metric.MType != models.Counter {
-		http.Error(res, `invalid metric type`, http.StatusBadRequest)
-		return
-	}
 
 	_, err := s.UpdateMetric(ctx, &metric)
 	if err != nil {
+		if err == store.ErrNotFound {
+			http.Error(res, "metric is not found or id is empty", http.StatusNotFound)
+			return
+		}
+		if err == store.ErrInvalidMetricReceived {
+			http.Error(res, "invalid metric recieved", http.StatusBadRequest)
+			return
+		}
 		logger.Error("cant update metric",
 			zap.Any("metric", metric),
 			zap.Error(err))
-		http.Error(res, "cant update metric", http.StatusBadRequest)
+		http.Error(res, "cant update metric", http.StatusInternalServerError)
 		return
 	}
 	res.WriteHeader(http.StatusOK)

@@ -1,1 +1,1 @@
-DROP TABLE metrics
+DROP TABLE IF EXISTS metrics;

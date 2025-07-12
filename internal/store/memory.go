@@ -18,13 +18,6 @@ func NewMemoryStorage() Storage {
 }
 
 func (s *memStorage) UpdateMetric(ctx context.Context, metric *models.Metrics) (*models.Metrics, error) {
-	if metric == nil {
-		return nil, errors.New("metric cannot be empty")
-	}
-	if metric.ID == "" {
-		return nil, errors.New("metric id cannot be empty")
-	}
-
 	existed, err := s.GetMetric(ctx, metric.ID)
 	if err != nil {
 		if err == ErrNotFound {

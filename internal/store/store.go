@@ -15,6 +15,7 @@ type Storage interface {
 }
 
 var ErrNotFound = errors.New("not found")
+var ErrInvalidMetricReceived = errors.New("invalid metric recieved")
 
 func New(ctx context.Context, config *config.Config) (Storage, error) {
 	if config.FileStoragePath != "" {

@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"database/sql"
+	"errors"
 
 	"github.com/Soliard/go-tpl-metrics/models"
 	"github.com/golang-migrate/migrate"
@@ -47,7 +48,7 @@ func NewDatabaseStorage(ctx context.Context, databaseDSN string) (Storage, error
 }
 
 func (s *DatabaseStorage) UpdateMetric(ctx context.Context, metric *models.Metrics) (*models.Metrics, error) {
-	_, err := s.GetMetric(ctx, metric.ID)
+	existed, err := s.GetMetric(ctx, metric.ID)
 	if err != nil {
 		if err == ErrNotFound {
 			_, err := s.db.ExecContext(ctx, `
@@ -62,6 +63,9 @@ func (s *DatabaseStorage) UpdateMetric(ctx context.Context, metric *models.Metri
 			return metric, nil
 		}
 		return nil, err
+	}
+	if existed.MType != metric.MType {
+		return nil, errors.New("trying to update existed metric with same id, but new mtype")
 	}
 	_, err = s.db.ExecContext(ctx, `
 		UPDATE 
