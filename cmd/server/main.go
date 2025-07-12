@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net/http"
 	"os"
@@ -15,35 +16,30 @@ import (
 func main() {
 
 	log.Print("server starting...")
+	defer os.Stdout.Sync()
 	config, err := config.New()
 	if err != nil {
-		log.Printf("cannot create config for server")
-		os.Stdout.Sync()
-		os.Exit(1)
+		log.Fatalf("FATAL: cannot create config: %v", err)
 	}
 
 	logger, err := logger.New(config.LogLevel)
 	if err != nil {
-		log.Printf("failed to initialize logger: %v", err)
-		os.Stdout.Sync()
-		os.Exit(1)
+		log.Fatalf("failed to initialize logger: %v", err)
 	}
-	logger.Info("Server config: ", zap.Any("config", config))
+	defer logger.Sync()
+	logger.Warn("server config: ", zap.Any("config", config))
 
-	storage, err := store.NewFileStorage(config.FileStoragePath, config.IsRestoreFromFile)
+	storage, err := store.New(context.TODO(), config)
 	if err != nil {
-		logger.Error("error while creating storage", zap.Error(err))
-		os.Stdout.Sync()
-		os.Exit(1)
+		logger.Fatal("error while creating storage", zap.Error(err))
 	}
+	logger.Sugar().Warnf("storage type: %T", storage)
+
 	service := server.NewMetricsService(storage, config, logger)
 	metricRouter := server.MetricRouter(service)
 
-	logger.Info("Server starting to listen on ", zap.String("ServerHost", service.ServerHost))
 	err = http.ListenAndServe(service.ServerHost, metricRouter)
 	if err != nil {
-		logger.Error("Fatal error while server serving", zap.Error(err))
-		os.Stdout.Sync()
-		os.Exit(1)
+		logger.Fatal("fatal error while server serving", zap.Error(err))
 	}
 }

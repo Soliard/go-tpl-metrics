@@ -1,0 +1,1 @@
+CREATE INDEX IF NOT EXISTS metric_id ON metrics (id);
