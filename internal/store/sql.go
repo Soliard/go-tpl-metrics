@@ -32,7 +32,7 @@ func NewDatabaseStorage(ctx context.Context, databaseDSN string) (Storage, error
 		return nil, err
 	}
 	migr, err := migrate.NewWithDatabaseInstance(
-		"file://migrations",
+		"file://cmd/server/migrations",
 		databaseDSN,
 		driver,
 	)
