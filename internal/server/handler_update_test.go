@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -107,8 +108,9 @@ func TestUpdateViaURLHandler(t *testing.T) {
 
 func TestUpdateHandler(t *testing.T) {
 	ts, service := setupTestServer(t)
-	client := resty.New()
 	defer ts.Close()
+	client := resty.New()
+	ctx := context.Background()
 	tests := []struct {
 		name           string
 		metric         *models.Metrics
@@ -161,8 +163,8 @@ func TestUpdateHandler(t *testing.T) {
 
 			// Если ожидаем успех, проверим, что метрика сохранилась
 			if tt.expectedStatus == http.StatusOK && tt.wantMetric != nil {
-				got, exists := service.GetMetric(tt.metric.ID)
-				assert.True(t, exists)
+				got, err := service.GetMetric(ctx, tt.metric.ID)
+				assert.NoError(t, err)
 				assert.Equal(t, tt.wantMetric.ID, got.ID)
 				assert.Equal(t, tt.wantMetric.MType, got.MType)
 				if got.MType == models.Gauge {
@@ -209,8 +211,8 @@ func Test_updateCounterMetric(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			_, service := setupTestServer(t)
-
-			err := service.UpdateCounter(tt.metricName, &tt.value)
+			ctx := context.Background()
+			_, err := service.UpdateMetric(ctx, models.NewCounterMetric(tt.metricName, tt.value))
 
 			if tt.wantErr {
 				assert.Error(t, err)
@@ -218,8 +220,8 @@ func Test_updateCounterMetric(t *testing.T) {
 			} else {
 				assert.NoError(t, err)
 				// Проверяем, что значение сохранилось в storage
-				metric, exists := service.GetMetric(tt.metricName)
-				assert.True(t, exists)
+				metric, err := service.GetMetric(ctx, tt.metricName)
+				assert.NoError(t, err)
 				assert.Equal(t, tt.wantValue, *metric.Delta)
 			}
 		})
@@ -227,22 +229,22 @@ func Test_updateCounterMetric(t *testing.T) {
 }
 
 func Test_updateCounterMetric_Accumulation(t *testing.T) {
+	ctx := context.Background()
 	_, s := setupTestServer(t)
 
-	var value1 int64 = 10
-	err := s.UpdateCounter("testCounter", &value1)
+	_, err := s.UpdateMetric(ctx, models.NewCounterMetric("testCounter", 10))
 	assert.NoError(t, err)
 
-	var value2 int64 = 20
-	err = s.UpdateCounter("testCounter", &value2)
+	_, err = s.UpdateMetric(ctx, models.NewCounterMetric("testCounter", 20))
 	assert.NoError(t, err)
 
-	metric, exists := s.GetMetric("testCounter")
-	assert.True(t, exists)
+	metric, err := s.GetMetric(ctx, "testCounter")
+	assert.NoError(t, err)
 	assert.Equal(t, int64(30), *metric.Delta) // 10 + 20
 }
 
 func Test_updateGaugeMetric(t *testing.T) {
+
 	tests := []struct {
 		name       string
 		metricName string
@@ -276,16 +278,16 @@ func Test_updateGaugeMetric(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			_, s := setupTestServer(t)
-
-			err := s.UpdateGauge(tt.metricName, &tt.delta)
+			ctx := context.Background()
+			_, err := s.UpdateMetric(ctx, models.NewGaugeMetric(tt.metricName, tt.delta))
 
 			if tt.wantErr {
 				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
 				// Проверяем, что значение сохранилось в storage
-				metric, exists := s.GetMetric(tt.metricName)
-				assert.True(t, exists)
+				metric, err := s.GetMetric(ctx, tt.metricName)
+				assert.NoError(t, err)
 				assert.Equal(t, tt.wantValue, *metric.Value)
 			}
 		})
