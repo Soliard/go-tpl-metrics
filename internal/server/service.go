@@ -23,6 +23,10 @@ func NewMetricsService(storage store.Storage, config *config.Config, logger *zap
 	}
 }
 
+func (s *MetricsService) UpdateMetrics(ctx context.Context, metrics []*models.Metrics) error {
+	return s.storage.UpdateMetrics(ctx, metrics)
+}
+
 func (s *MetricsService) UpdateMetric(ctx context.Context, metric *models.Metrics) (*models.Metrics, error) {
 	if (metric.Delta == nil && metric.Value == nil) ||
 		(metric.MType != models.Gauge && metric.MType != models.Counter) {

@@ -10,14 +10,15 @@ import (
 	"github.com/golang-migrate/migrate/database/postgres"
 	_ "github.com/golang-migrate/migrate/source/file"
 	_ "github.com/jackc/pgx/v5/stdlib"
+	"github.com/jmoiron/sqlx"
 )
 
 type DatabaseStorage struct {
-	db *sql.DB
+	db *sqlx.DB
 }
 
 func NewDatabaseStorage(ctx context.Context, databaseDSN string) (Storage, error) {
-	db, err := sql.Open("pgx", databaseDSN)
+	db, err := sqlx.Open("pgx", databaseDSN)
 	if err != nil {
 		return nil, err
 	}
@@ -28,12 +29,13 @@ func NewDatabaseStorage(ctx context.Context, databaseDSN string) (Storage, error
 
 	//exmpl migrate create -ext sql -dir migrations -seq create_metrics_table
 	// миграции
-	driver, err := postgres.WithInstance(db, &postgres.Config{})
+	driver, err := postgres.WithInstance(db.DB, &postgres.Config{})
 	if err != nil {
 		return nil, err
 	}
 	migr, err := migrate.NewWithDatabaseInstance(
-		"file://cmd/server/migrations",
+		//file://cmd/server/migrations
+		"file://migrations",
 		databaseDSN,
 		driver,
 	)
@@ -45,6 +47,44 @@ func NewDatabaseStorage(ctx context.Context, databaseDSN string) (Storage, error
 	}
 
 	return &DatabaseStorage{db: db}, nil
+}
+
+func (s *DatabaseStorage) UpdateMetrics(ctx context.Context, metrics []*models.Metrics) error {
+	query := `
+	INSERT INTO metrics (id, type, value, delta, hash)
+	VALUES (:id, :type, :value, :delta, :hash)
+	ON CONFLICT (id) DO UPDATE SET
+		value = EXCLUDED.value,
+		delta = EXCLUDED.delta,
+		hash = EXCLUDED.hash
+`
+	tx, err := s.db.BeginTxx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	stmt, err := tx.PrepareNamedContext(ctx, query)
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+
+	for _, m := range metrics {
+		params := map[string]interface{}{
+			"id":    m.ID,
+			"type":  m.MType,
+			"value": m.Value,
+			"delta": m.Delta,
+			"hash":  m.Hash,
+		}
+		_, err := stmt.ExecContext(ctx, params)
+		if err != nil {
+			return err
+		}
+	}
+
+	return tx.Commit()
 }
 
 func (s *DatabaseStorage) UpdateMetric(ctx context.Context, metric *models.Metrics) (*models.Metrics, error) {

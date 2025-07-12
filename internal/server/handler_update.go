@@ -13,6 +13,32 @@ import (
 	"go.uber.org/zap"
 )
 
+func (s *MetricsService) UpdatesHandler(res http.ResponseWriter, req *http.Request) {
+	ctx := req.Context()
+	logger := logger.LoggerFromCtx(ctx, s.Logger)
+	if req.Header.Get("Content-type") != "application/json" {
+		http.Error(res, "only application/json content accepting", http.StatusBadRequest)
+		return
+	}
+	defer req.Body.Close()
+
+	metrics := []*models.Metrics{}
+	err := json.NewDecoder(req.Body).Decode(&metrics)
+	if err != nil {
+		logger.Warn("cant decode body to metric slice", zap.Error(err))
+		http.Error(res, "cant decode body to metrics", http.StatusBadRequest)
+		return
+	}
+	err = s.UpdateMetrics(ctx, metrics)
+	if err != nil {
+		logger.Error("error while batch metrics update", zap.Error(err))
+		http.Error(res, "error while batch metrics update", http.StatusInternalServerError)
+		return
+	}
+	res.WriteHeader(http.StatusOK)
+
+}
+
 func (s *MetricsService) UpdateHandler(res http.ResponseWriter, req *http.Request) {
 	ctx := req.Context()
 	logger := logger.LoggerFromCtx(ctx, s.Logger)

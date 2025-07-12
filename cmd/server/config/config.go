@@ -19,11 +19,11 @@ func New() (*Config, error) {
 	config := &Config{}
 
 	flag.StringVar(&config.ServerHost, "a", "localhost:8080", "server addres")
-	flag.StringVar(&config.LogLevel, "l", "info", "log level")
+	flag.StringVar(&config.LogLevel, "l", "warn", "log level")
 	flag.IntVar(&config.StoreIntervalSeconds, "i", 0, "store data interval in seconds") //not used, storing every update
 	flag.StringVar(&config.FileStoragePath, "f", "", "file storage name")               //FileStorage\\default.txt
 	flag.BoolVar(&config.IsRestoreFromFile, "r", false, "is need to restore data from existed f file")
-	flag.StringVar(&config.DatabaseDSN, "d", "", "database connection string") //postgres://postgres:postgres@localhost:5432/gotplmetrics
+	flag.StringVar(&config.DatabaseDSN, "d", "postgres://postgres:postgres@localhost:5432/gotplmetrics", "database connection string") //postgres://postgres:postgres@localhost:5432/gotplmetrics
 	flag.Parse()
 
 	err := env.Parse(config)

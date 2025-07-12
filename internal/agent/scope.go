@@ -2,9 +2,12 @@ package agent
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"maps"
 	"net/http"
 	"net/url"
+	"slices"
 	"time"
 
 	"github.com/Soliard/go-tpl-metrics/internal/compressor"
@@ -32,7 +35,7 @@ func (a *Agent) Run() {
 		}
 
 		if reportCounter >= int(a.reportInterval.Seconds()) {
-			if err := a.reportMetrics(); err != nil {
+			if err := a.reportMetricsBatch(); err != nil {
 				a.Logger.Error("error while reporting metrics", zap.Error(err))
 			}
 			reportCounter = 0
@@ -40,8 +43,45 @@ func (a *Agent) Run() {
 	}
 }
 
-func (a *Agent) reportMetrics() error {
+func (a *Agent) reportMetricsBatch() error {
+	url, err := url.JoinPath(a.serverHostURL, "updates")
+	if err != nil {
+		return err
+	}
+	req := a.httpClient.R()
 
+	body, err := json.Marshal(slices.Collect(maps.Values(a.collector.Metrics)))
+	if err != nil {
+		return fmt.Errorf("cant marshal metrics: %v", err)
+	}
+	compBody, err := compressor.CompressData(body)
+	if err != nil {
+		return fmt.Errorf("cant compress data: %v", err)
+	}
+	req.Header.Set("Content-type", "application/json")
+	req.Header.Set("Content-Encoding", "gzip")
+	// resty позаботится о асептинге gzip и о расшифровке тела ответа из gzip
+	req.Header.Set("Accept", "application/json")
+	req.SetBody(compBody)
+
+	res, err := req.Post(url)
+	if err != nil {
+		a.Logger.Error("error while send metrics to server",
+			zap.Error(err))
+		return err
+	}
+
+	//проверяем ответ
+	if res.StatusCode() != http.StatusOK {
+		a.Logger.Error("server returned not ok response for sended metrics",
+			zap.Int("statuscode", res.StatusCode()))
+		return errors.New("server returned not ok response for sended metrics")
+	}
+
+	return nil
+}
+
+func (a *Agent) reportMetrics() error {
 	for _, value := range a.collector.Metrics {
 		err := a.sendMetricJSON(value)
 		if err != nil {

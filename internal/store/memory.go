@@ -17,6 +17,16 @@ func NewMemoryStorage() Storage {
 	}
 }
 
+func (s *memStorage) UpdateMetrics(ctx context.Context, metrics []*models.Metrics) error {
+	for _, m := range metrics {
+		_, err := s.UpdateMetric(ctx, m)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (s *memStorage) UpdateMetric(ctx context.Context, metric *models.Metrics) (*models.Metrics, error) {
 	existed, err := s.GetMetric(ctx, metric.ID)
 	if err != nil {

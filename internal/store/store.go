@@ -10,6 +10,7 @@ import (
 
 type Storage interface {
 	UpdateMetric(ctx context.Context, metric *models.Metrics) (*models.Metrics, error)
+	UpdateMetrics(ctx context.Context, metrics []*models.Metrics) error
 	GetMetric(ctx context.Context, name string) (*models.Metrics, error)
 	GetAllMetrics(ctx context.Context) ([]models.Metrics, error)
 }

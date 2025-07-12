@@ -27,18 +27,17 @@ func main() {
 		log.Fatalf("failed to initialize logger: %v", err)
 	}
 	defer logger.Sync()
-	logger.Info("server config: ", zap.Any("config", config))
+	logger.Warn("server config: ", zap.Any("config", config))
 
 	storage, err := store.New(context.TODO(), config)
 	if err != nil {
 		logger.Fatal("error while creating storage", zap.Error(err))
 	}
-	logger.Sugar().Infof("storage type: %T", storage)
+	logger.Sugar().Warnf("storage type: %T", storage)
 
 	service := server.NewMetricsService(storage, config, logger)
 	metricRouter := server.MetricRouter(service)
 
-	logger.Info("server starting to listen on ", zap.String("ServerHost", service.ServerHost))
 	err = http.ListenAndServe(service.ServerHost, metricRouter)
 	if err != nil {
 		logger.Fatal("fatal error while server serving", zap.Error(err))

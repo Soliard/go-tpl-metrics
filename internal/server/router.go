@@ -18,6 +18,9 @@ func MetricRouter(s *MetricsService) chi.Router {
 		r.Post("/{type}/{name}", func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusBadRequest) })
 		r.Post("/{type}/{name}/{value}", s.UpdateViaURLHandler)
 	})
+	r.Route("/updates", func(r chi.Router) {
+		r.Post("/", s.UpdatesHandler)
+	})
 	r.Route("/value", func(r chi.Router) {
 		r.Post("/", s.ValueHandler)
 		r.Get("/{type}/{name}", s.ValueViaURLHandler)
