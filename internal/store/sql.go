@@ -88,44 +88,33 @@ func (s *DatabaseStorage) UpdateMetrics(ctx context.Context, metrics []*models.M
 }
 
 func (s *DatabaseStorage) UpdateMetric(ctx context.Context, metric *models.Metrics) (*models.Metrics, error) {
-	existed, err := s.GetMetric(ctx, metric.ID)
-	if err != nil {
-		if errors.Is(err, ErrNotFound) {
-			_, err := s.db.ExecContext(ctx, `
-				INSERT INTO metrics 
-					(id, type, value, delta, hash) 
-				VALUES 
-					($1, $2, $3, $4, $5)
-			`, metric.ID, metric.MType, metric.Value, metric.Delta, metric.Hash)
-			if err != nil {
-				return nil, err
-			}
-			return metric, nil
-		}
-		return nil, err
-	}
-	if existed.MType != metric.MType {
-		return nil, errors.New("trying to update existed metric with same id, but new mtype")
-	}
+	var query string
+	var args []interface{}
+
 	if metric.MType == models.Counter {
-		_, err = s.db.ExecContext(ctx, `
-			UPDATE 
-				metrics
-			SET
-				delta = delta + $1
-			WHERE
-				id = $2
-		`, metric.Delta, metric.ID)
+		query = `
+			INSERT INTO metrics (id, type, value, delta, hash)
+			VALUES ($1, $2, $3, $4, $5)
+			ON CONFLICT (id) DO UPDATE SET
+				delta = metrics.delta + EXCLUDED.delta,
+				hash = EXCLUDED.hash
+		`
+		args = []interface{}{metric.ID, metric.MType, metric.Value, metric.Delta, metric.Hash}
+	} else if metric.MType == models.Gauge {
+		query = `
+			INSERT INTO metrics (id, type, value, delta, hash)
+			VALUES ($1, $2, $3, $4, $5)
+			ON CONFLICT (id) DO UPDATE SET
+				value = EXCLUDED.value,
+				hash = EXCLUDED.hash
+		`
+		args = []interface{}{metric.ID, metric.MType, metric.Value, metric.Delta, metric.Hash}
 	} else {
-		_, err = s.db.ExecContext(ctx, `
-			UPDATE 
-				metrics
-			SET
-				value = $1
-			WHERE
-				id = $2
-		`, metric.Value, metric.ID)
+		return nil, ErrInvalidMetricReceived
 	}
+
+	_, err := s.db.ExecContext(ctx, query, args...)
+
 	if err != nil {
 		return nil, err
 	}
@@ -133,17 +122,21 @@ func (s *DatabaseStorage) UpdateMetric(ctx context.Context, metric *models.Metri
 }
 
 func (s *DatabaseStorage) GetMetric(ctx context.Context, name string) (*models.Metrics, error) {
-	var metric models.Metrics
-	err := s.db.QueryRowContext(ctx, `
+	query := `
 		SELECT 
 			id, type, delta, value, hash
 		FROM
 			metrics
 		WHERE 
 			id = $1
-	`, name).Scan(&metric.ID, &metric.MType, &metric.Delta, &metric.Value, &metric.Hash)
+		`
+
+	var metric models.Metrics
+	err := s.db.QueryRowContext(ctx, query, name).
+		Scan(&metric.ID, &metric.MType, &metric.Delta, &metric.Value, &metric.Hash)
+
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if errors.Is(err, sql.ErrNoRows) {
 			return nil, ErrNotFound
 		}
 		return nil, err
@@ -153,12 +146,12 @@ func (s *DatabaseStorage) GetMetric(ctx context.Context, name string) (*models.M
 
 func (s *DatabaseStorage) GetAllMetrics(ctx context.Context) ([]models.Metrics, error) {
 	var metrics []models.Metrics
-
-	rows, err := s.db.QueryContext(ctx, `
+	query := `
 		SELECT
 			id, type, delta, value, hash
 		FROM metrics
-	`)
+	`
+	rows, err := s.db.QueryContext(ctx, query)
 	if err != nil {
 		return nil, err
 	}
