@@ -39,7 +39,7 @@ func (a *Agent) Run() {
 			if err := a.reportMetricsBatch(); err != nil {
 				a.Logger.Error("error while reporting metrics", zap.Error(err))
 			}
-			a.Logger.Info("stats reported")
+			a.Logger.Warn("stats reported")
 			reportCounter = 0
 		}
 	}
