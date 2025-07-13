@@ -80,8 +80,8 @@ func (s *MetricsService) GetMetric(ctx context.Context, name string) (*models.Me
 	return metric, err
 }
 
-func (s *MetricsService) GetAllMetrics(ctx context.Context) ([]models.Metrics, error) {
-	var metrics []models.Metrics
+func (s *MetricsService) GetAllMetrics(ctx context.Context) ([]*models.Metrics, error) {
+	var metrics []*models.Metrics
 	var err error
 	for i := 0; i < maxRetries; i++ {
 		metrics, err = s.storage.GetAllMetrics(ctx)

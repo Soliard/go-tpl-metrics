@@ -144,8 +144,8 @@ func (s *DatabaseStorage) GetMetric(ctx context.Context, name string) (*models.M
 	return &metric, nil
 }
 
-func (s *DatabaseStorage) GetAllMetrics(ctx context.Context) ([]models.Metrics, error) {
-	var metrics []models.Metrics
+func (s *DatabaseStorage) GetAllMetrics(ctx context.Context) ([]*models.Metrics, error) {
+	var metrics []*models.Metrics
 	query := `
 		SELECT
 			id, type, delta, value, hash
@@ -164,7 +164,7 @@ func (s *DatabaseStorage) GetAllMetrics(ctx context.Context) ([]models.Metrics, 
 			return nil, err
 		}
 
-		metrics = append(metrics, m)
+		metrics = append(metrics, &m)
 	}
 
 	err = rows.Err()

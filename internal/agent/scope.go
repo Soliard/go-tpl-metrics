@@ -153,8 +153,6 @@ func (a *Agent) sendMetric(metric *models.Metrics) error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf(`[sendMetric] %s`, url)
-
 	res, err := a.httpClient.R().
 		SetHeader("Content-type", "text/plain").
 		Post(url)

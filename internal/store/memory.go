@@ -68,11 +68,11 @@ func (s *memStorage) GetMetric(ctx context.Context, name string) (*models.Metric
 	return nil, ErrNotFound
 }
 
-func (s *memStorage) GetAllMetrics(ctx context.Context) ([]models.Metrics, error) {
-	metrics := make([]models.Metrics, len(s.metrics))
+func (s *memStorage) GetAllMetrics(ctx context.Context) ([]*models.Metrics, error) {
+	metrics := make([]*models.Metrics, len(s.metrics))
 	idx := 0
 	for _, m := range s.metrics {
-		metrics[idx] = *m
+		metrics[idx] = m
 		idx++
 	}
 	return metrics, nil

@@ -52,7 +52,7 @@ func (s *fileStorage) GetMetric(ctx context.Context, name string) (*models.Metri
 	return s.memory.GetMetric(ctx, name)
 }
 
-func (s *fileStorage) GetAllMetrics(ctx context.Context) ([]models.Metrics, error) {
+func (s *fileStorage) GetAllMetrics(ctx context.Context) ([]*models.Metrics, error) {
 	return s.memory.GetAllMetrics(ctx)
 }
 
