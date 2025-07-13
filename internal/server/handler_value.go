@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 
 	"github.com/Soliard/go-tpl-metrics/internal/store"
@@ -26,7 +27,7 @@ func (s *MetricsService) ValueHandler(res http.ResponseWriter, req *http.Request
 
 	retMetric, err := s.GetMetric(ctx, metric.ID)
 	if err != nil {
-		if err == store.ErrNotFound {
+		if errors.Is(err, store.ErrNotFound) {
 			http.Error(res, `metric with this name doesnt exists`, http.StatusNotFound)
 			return
 		}
@@ -58,7 +59,7 @@ func (s *MetricsService) ValueViaURLHandler(res http.ResponseWriter, req *http.R
 	}
 	metric, err := s.GetMetric(ctx, m.ID)
 	if err != nil {
-		if err == store.ErrNotFound {
+		if errors.Is(err, store.ErrNotFound) {
 			http.Error(res, `metric with this name doesnt exists`, http.StatusNotFound)
 			return
 		}

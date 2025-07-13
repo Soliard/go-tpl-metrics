@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -56,11 +57,11 @@ func (s *MetricsService) UpdateHandler(res http.ResponseWriter, req *http.Reques
 	}
 	retMetric, err := s.UpdateMetric(ctx, metric)
 	if err != nil {
-		if err == store.ErrNotFound {
+		if errors.Is(err, store.ErrNotFound) {
 			http.Error(res, `metric is not found or id is empty`, http.StatusNotFound)
 			return
 		}
-		if err == store.ErrInvalidMetricReceived {
+		if errors.Is(err, store.ErrInvalidMetricReceived) {
 			http.Error(res, "invalid metric recieved", http.StatusBadRequest)
 			return
 		}
@@ -92,11 +93,11 @@ func (s *MetricsService) UpdateViaURLHandler(res http.ResponseWriter, req *http.
 
 	_, err := s.UpdateMetric(ctx, &metric)
 	if err != nil {
-		if err == store.ErrNotFound {
+		if errors.Is(err, store.ErrNotFound) {
 			http.Error(res, "metric is not found or id is empty", http.StatusNotFound)
 			return
 		}
-		if err == store.ErrInvalidMetricReceived {
+		if errors.Is(err, store.ErrInvalidMetricReceived) {
 			http.Error(res, "invalid metric recieved", http.StatusBadRequest)
 			return
 		}

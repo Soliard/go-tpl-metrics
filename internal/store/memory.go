@@ -30,7 +30,7 @@ func (s *memStorage) UpdateMetrics(ctx context.Context, metrics []*models.Metric
 func (s *memStorage) UpdateMetric(ctx context.Context, metric *models.Metrics) (*models.Metrics, error) {
 	existed, err := s.GetMetric(ctx, metric.ID)
 	if err != nil {
-		if err == ErrNotFound {
+		if errors.Is(err, ErrNotFound) {
 			// creating new metric
 			s.metrics[metric.ID] = metric
 			return metric, nil

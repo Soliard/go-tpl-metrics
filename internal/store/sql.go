@@ -90,7 +90,7 @@ func (s *DatabaseStorage) UpdateMetrics(ctx context.Context, metrics []*models.M
 func (s *DatabaseStorage) UpdateMetric(ctx context.Context, metric *models.Metrics) (*models.Metrics, error) {
 	existed, err := s.GetMetric(ctx, metric.ID)
 	if err != nil {
-		if err == ErrNotFound {
+		if errors.Is(err, ErrNotFound) {
 			_, err := s.db.ExecContext(ctx, `
 				INSERT INTO metrics 
 					(id, type, value, delta, hash) 
