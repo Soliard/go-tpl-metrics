@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"os"
-	"syscall"
 	"time"
 
 	"github.com/Soliard/go-tpl-metrics/cmd/server/config"
@@ -113,9 +112,6 @@ func isRetriableError(err error) bool {
 		return pgErr.Code == pgerrcode.ConnectionException
 	}
 	if errors.Is(err, os.ErrDeadlineExceeded) || errors.Is(err, os.ErrPermission) {
-		return true
-	}
-	if errors.Is(err, syscall.ERROR_ACCESS_DENIED) {
 		return true
 	}
 	return false
