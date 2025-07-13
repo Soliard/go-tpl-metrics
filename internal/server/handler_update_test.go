@@ -2,11 +2,14 @@ package server
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"testing"
 
 	"github.com/Soliard/go-tpl-metrics/cmd/server/config"
+	"github.com/Soliard/go-tpl-metrics/internal/compressor"
 	"github.com/Soliard/go-tpl-metrics/internal/logger"
 	"github.com/Soliard/go-tpl-metrics/internal/store"
 	"github.com/Soliard/go-tpl-metrics/models"
@@ -289,6 +292,85 @@ func Test_updateGaugeMetric(t *testing.T) {
 				metric, err := s.GetMetric(ctx, tt.metricName)
 				assert.NoError(t, err)
 				assert.Equal(t, tt.wantValue, *metric.Value)
+			}
+		})
+	}
+}
+
+func Test_UpdatesHandler(t *testing.T) {
+	server, service := setupTestServer(t)
+	client := resty.New()
+	tests := []struct {
+		name       string
+		metrics    []*models.Metrics
+		wantStatus int
+		wantSaved  []*models.Metrics // Ожидаемые метрики, которые должны сохраниться
+	}{
+		{
+			name: "valid metrics",
+			metrics: []*models.Metrics{
+				models.NewGaugeMetric("test1", 42.0),
+				models.NewCounterMetric("test2", 7),
+			},
+			wantStatus: 200,
+			wantSaved: []*models.Metrics{
+				models.NewGaugeMetric("test1", 42.0),
+				models.NewCounterMetric("test2", 7),
+			},
+		},
+		{
+			name: "second valid metrics",
+			metrics: []*models.Metrics{
+				models.NewGaugeMetric("test1", 55.5),
+				models.NewCounterMetric("test2", 7),
+			},
+			wantStatus: 200,
+			wantSaved: []*models.Metrics{
+				models.NewGaugeMetric("test1", 55.5),
+				models.NewCounterMetric("test2", 14),
+			},
+		},
+		{
+			name:       "empty metrics",
+			metrics:    []*models.Metrics{},
+			wantStatus: 200,
+			wantSaved:  []*models.Metrics{},
+		},
+		{
+			name: "badrequest metrics",
+			metrics: []*models.Metrics{
+				{ID: "ttt", MType: "bad", Value: models.PFloat(3.0)},
+				models.NewCounterMetric("test2", 7),
+			},
+			wantStatus: 400,
+			wantSaved:  []*models.Metrics{},
+		},
+		// Можно добавить ещё кейсы
+	}
+
+	url, err := url.JoinPath(server.URL, "updates")
+	assert.NoError(t, err)
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			body, err := json.Marshal(tt.metrics)
+			assert.NoError(t, err)
+			compBody, err := compressor.CompressData(body)
+			assert.NoError(t, err)
+			res, err := client.R().
+				SetHeader("Content-type", "application/json").
+				SetHeader("Content-Encoding", "gzip").
+				SetHeader("Accept", "application/json").
+				SetBody(compBody).
+				Post(url)
+			assert.NoError(t, err)
+
+			require.Equal(t, tt.wantStatus, res.StatusCode())
+
+			for _, wantMetric := range tt.wantSaved {
+				got, err := service.GetMetric(context.Background(), wantMetric.ID)
+				require.NoError(t, err)
+				require.Equal(t, wantMetric, got)
 			}
 		})
 	}

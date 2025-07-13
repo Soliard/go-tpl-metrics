@@ -32,6 +32,17 @@ func NewMetricsService(storage store.Storage, config *config.Config, logger *zap
 
 func (s *MetricsService) UpdateMetrics(ctx context.Context, metrics []*models.Metrics) error {
 	var err error
+
+	for _, m := range metrics {
+		mErr := validateMetric(m)
+		if mErr != nil {
+			err = errors.Join(err, mErr)
+		}
+	}
+	if err != nil {
+		return err
+	}
+
 	for i := 0; i < maxRetries; i++ {
 		err = s.storage.UpdateMetrics(ctx, metrics)
 		if isRetriableError(err) {
@@ -44,16 +55,14 @@ func (s *MetricsService) UpdateMetrics(ctx context.Context, metrics []*models.Me
 }
 
 func (s *MetricsService) UpdateMetric(ctx context.Context, metric *models.Metrics) (*models.Metrics, error) {
-	if (metric.Delta == nil && metric.Value == nil) ||
-		(metric.MType != models.Gauge && metric.MType != models.Counter) {
-		return nil, store.ErrInvalidMetricReceived
-	}
-	if metric.ID == "" {
-		return nil, store.ErrNotFound
-	}
-
 	var retMetric *models.Metrics
 	var err error
+
+	err = validateMetric(metric)
+	if err != nil {
+		return nil, err
+	}
+
 	for i := 0; i < maxRetries; i++ {
 		retMetric, err = s.storage.UpdateMetric(ctx, metric)
 		if isRetriableError(err) {
@@ -91,6 +100,17 @@ func (s *MetricsService) GetAllMetrics(ctx context.Context) ([]*models.Metrics, 
 		return metrics, err
 	}
 	return metrics, err
+}
+
+func validateMetric(m *models.Metrics) error {
+	if (m.Delta == nil && m.Value == nil) ||
+		(m.MType != models.Gauge && m.MType != models.Counter) {
+		return store.ErrInvalidMetricReceived
+	}
+	if m.ID == "" {
+		return store.ErrNotFound
+	}
+	return nil
 }
 
 func waitForRetry(iter int) {

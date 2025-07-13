@@ -32,6 +32,11 @@ func (s *MetricsService) UpdatesHandler(res http.ResponseWriter, req *http.Reque
 	}
 	err = s.UpdateMetrics(ctx, metrics)
 	if err != nil {
+		if errors.Is(err, store.ErrInvalidMetricReceived) {
+			logger.Warn("recieved one or more invalid metric", zap.Error(err))
+			http.Error(res, "recieved one or more invalid metric", http.StatusBadRequest)
+			return
+		}
 		logger.Error("error while batch metrics update", zap.Error(err))
 		http.Error(res, "error while batch metrics update", http.StatusInternalServerError)
 		return
