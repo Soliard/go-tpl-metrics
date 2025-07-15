@@ -2,7 +2,6 @@ package agent
 
 import (
 	"errors"
-	"fmt"
 	"math/rand"
 	"runtime"
 
@@ -74,8 +73,6 @@ func (s *StatsCollector) Collect() error {
 	s.UpdateGauge("RandomValue", float64(rand.Float64()))
 
 	s.UpdateCounter("PollCount")
-
-	fmt.Println("Stats collected")
 
 	return nil
 }

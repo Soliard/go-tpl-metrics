@@ -1,6 +1,7 @@
 package store
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -31,36 +32,28 @@ func NewFileStorage(filePath string, isRestore bool) (Storage, error) {
 	}, nil
 }
 
-func (s *fileStorage) UpdateCounter(name string, value *int64) error {
-	err := s.memory.UpdateCounter(name, value)
+func (s *fileStorage) UpdateMetrics(ctx context.Context, metrics []*models.Metrics) error {
+	return s.memory.UpdateMetrics(ctx, metrics)
+}
+
+func (s *fileStorage) UpdateMetric(ctx context.Context, metric *models.Metrics) (*models.Metrics, error) {
+	m, err := s.memory.UpdateMetric(ctx, metric)
 	if err != nil {
-		return err
+		return m, err
 	}
 	err = s.saveMemoryToFile()
 	if err != nil {
-		return err
+		return m, err
 	}
-	return nil
+	return m, nil
 }
 
-func (s *fileStorage) UpdateGauge(name string, value *float64) error {
-	err := s.memory.UpdateGauge(name, value)
-	if err != nil {
-		return err
-	}
-	err = s.saveMemoryToFile()
-	if err != nil {
-		return err
-	}
-	return nil
+func (s *fileStorage) GetMetric(ctx context.Context, name string) (*models.Metrics, error) {
+	return s.memory.GetMetric(ctx, name)
 }
 
-func (s *fileStorage) GetMetric(name string) (metric *models.Metrics, exists bool) {
-	return s.memory.GetMetric(name)
-}
-
-func (s *fileStorage) GetAllMetrics() []models.Metrics {
-	return s.memory.GetAllMetrics()
+func (s *fileStorage) GetAllMetrics(ctx context.Context) ([]*models.Metrics, error) {
+	return s.memory.GetAllMetrics(ctx)
 }
 
 func restoreFromFile(filePath string) (map[string]*models.Metrics, error) {

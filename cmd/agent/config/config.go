@@ -19,7 +19,7 @@ func New() (*Config, error) {
 	flag.StringVar(&config.ServerHost, "a", "localhost:8080", "server addres")
 	flag.IntVar(&config.PollIntervalSeconds, "p", 2, "metrics poll interval is seconds")
 	flag.IntVar(&config.ReportIntervalSeconds, "r", 10, "metrics send interval in seconds")
-	flag.StringVar(&config.LogLevel, "l", "info", "log level")
+	flag.StringVar(&config.LogLevel, "l", "warn", "log level")
 	flag.Parse()
 
 	err := env.Parse(config)

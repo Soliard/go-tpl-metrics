@@ -19,10 +19,14 @@ type Agent struct {
 }
 
 func New(config *config.Config, logger *zap.Logger) *Agent {
+	client := resty.New().
+		SetRetryCount(3).
+		SetRetryMaxWaitTime(2)
+
 	return &Agent{
 		serverHostURL:  normalizeServerURL(config.ServerHost),
 		collector:      NewStatsCollector(),
-		httpClient:     resty.New(),
+		httpClient:     client,
 		Logger:         logger,
 		pollInterval:   time.Second * time.Duration(config.PollIntervalSeconds),
 		reportInterval: time.Second * time.Duration(config.ReportIntervalSeconds),

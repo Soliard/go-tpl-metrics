@@ -2,16 +2,52 @@ package server
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
 
+	"github.com/Soliard/go-tpl-metrics/internal/logger"
+	"github.com/Soliard/go-tpl-metrics/internal/store"
 	"github.com/Soliard/go-tpl-metrics/models"
 	"github.com/go-chi/chi/v5"
 	"go.uber.org/zap"
 )
 
+func (s *MetricsService) UpdatesHandler(res http.ResponseWriter, req *http.Request) {
+	ctx := req.Context()
+	logger := logger.LoggerFromCtx(ctx, s.Logger)
+	if req.Header.Get("Content-type") != "application/json" {
+		http.Error(res, "only application/json content accepting", http.StatusBadRequest)
+		return
+	}
+	defer req.Body.Close()
+
+	metrics := []*models.Metrics{}
+	err := json.NewDecoder(req.Body).Decode(&metrics)
+	if err != nil {
+		logger.Warn("cant decode body to metric slice", zap.Error(err))
+		http.Error(res, "cant decode body to metrics", http.StatusBadRequest)
+		return
+	}
+	err = s.UpdateMetrics(ctx, metrics)
+	if err != nil {
+		if errors.Is(err, store.ErrInvalidMetricReceived) {
+			logger.Warn("recieved one or more invalid metric", zap.Error(err))
+			http.Error(res, "recieved one or more invalid metric", http.StatusBadRequest)
+			return
+		}
+		logger.Error("error while batch metrics update", zap.Error(err))
+		http.Error(res, "error while batch metrics update", http.StatusInternalServerError)
+		return
+	}
+	res.WriteHeader(http.StatusOK)
+
+}
+
 func (s *MetricsService) UpdateHandler(res http.ResponseWriter, req *http.Request) {
+	ctx := req.Context()
+	logger := logger.LoggerFromCtx(ctx, s.Logger)
 	if req.Header.Get("Content-type") != "application/json" {
 		http.Error(res, "only application/json content accepting", http.StatusBadRequest)
 		return
@@ -20,51 +56,30 @@ func (s *MetricsService) UpdateHandler(res http.ResponseWriter, req *http.Reques
 	metric := &models.Metrics{}
 	err := json.NewDecoder(req.Body).Decode(metric)
 	if err != nil {
-		s.Logger.Warn("cant decode body to metric type", zap.Error(err))
+		logger.Warn("cant decode body to metric type", zap.Error(err))
 		http.Error(res, "cant decode body to metric type", http.StatusBadRequest)
 		return
 	}
-
-	if metric.ID == "" {
-		s.Logger.Warn("update handler recieved metric with empty id")
-		http.Error(res, `metric id cannot be empty`, http.StatusNotFound)
-		return
-	}
-
-	switch metric.MType {
-	case models.Gauge:
-		err := s.UpdateGauge(metric.ID, metric.Value)
-		if err != nil {
-			s.Logger.Error("error while update gauge metric", zap.Error(err), zap.Any("recieved metric", metric))
-			http.Error(res, err.Error(), http.StatusInternalServerError)
+	retMetric, err := s.UpdateMetric(ctx, metric)
+	if err != nil {
+		if errors.Is(err, store.ErrNotFound) {
+			http.Error(res, `metric is not found or id is empty`, http.StatusNotFound)
 			return
 		}
-	case models.Counter:
-		err := s.UpdateCounter(metric.ID, metric.Delta)
-		if err != nil {
-			s.Logger.Error("error while update counter metric", zap.Error(err), zap.Any("recieved metric", metric))
-			http.Error(res, err.Error(), http.StatusInternalServerError)
+		if errors.Is(err, store.ErrInvalidMetricReceived) {
+			http.Error(res, "invalid metric recieved", http.StatusBadRequest)
 			return
 		}
-	default:
-		s.Logger.Warn("recieved unknown metric type to update", zap.Any("recieved metric", metric))
-		http.Error(res, `invalid metric type`, http.StatusBadRequest)
-		return
-	}
-
-	retMetric, ok := s.GetMetric(metric.ID)
-	if !ok {
-		s.Logger.Error("cant get metric that was updated right now",
-			zap.Error(err),
-			zap.String("metric id", metric.ID),
-			zap.Any("recieved metric", metric))
-		http.Error(res, "cant get metric that was updated right now", http.StatusInternalServerError)
+		logger.Error("cant update metric",
+			zap.Any("metric", metric),
+			zap.Error(err))
+		http.Error(res, "cant update metric", http.StatusInternalServerError)
 		return
 	}
 
 	retBody, err := json.Marshal(retMetric)
 	if err != nil {
-		s.Logger.Error("cant marshal metric",
+		logger.Error("cant marshal metric",
 			zap.Error(err),
 			zap.Any("metric", retMetric))
 		http.Error(res, "cant return metric", http.StatusInternalServerError)
@@ -77,36 +92,26 @@ func (s *MetricsService) UpdateHandler(res http.ResponseWriter, req *http.Reques
 }
 
 func (s *MetricsService) UpdateViaURLHandler(res http.ResponseWriter, req *http.Request) {
+	ctx := req.Context()
+	logger := logger.LoggerFromCtx(ctx, s.Logger)
 	metric := parseMetricURL(req)
 
-	if metric.ID == "" {
-		http.Error(res, `metric name cannot be empty`, http.StatusNotFound)
-		return
-	}
-
-	if metric.Delta == nil && metric.Value == nil {
-		http.Error(res, "empty value", http.StatusBadRequest)
-		return
-	}
-
-	switch metric.MType {
-	case models.Gauge:
-		err := s.UpdateGauge(metric.ID, metric.Value)
-		if err != nil {
-			http.Error(res, err.Error(), http.StatusBadRequest)
+	_, err := s.UpdateMetric(ctx, &metric)
+	if err != nil {
+		if errors.Is(err, store.ErrNotFound) {
+			http.Error(res, "metric is not found or id is empty", http.StatusNotFound)
 			return
 		}
-	case models.Counter:
-		err := s.UpdateCounter(metric.ID, metric.Delta)
-		if err != nil {
-			http.Error(res, err.Error(), http.StatusBadRequest)
+		if errors.Is(err, store.ErrInvalidMetricReceived) {
+			http.Error(res, "invalid metric recieved", http.StatusBadRequest)
 			return
 		}
-	default:
-		http.Error(res, `invalid metric type`, http.StatusBadRequest)
+		logger.Error("cant update metric",
+			zap.Any("metric", metric),
+			zap.Error(err))
+		http.Error(res, "cant update metric", http.StatusInternalServerError)
 		return
 	}
-
 	res.WriteHeader(http.StatusOK)
 }
 
