@@ -11,6 +11,7 @@ type Config struct {
 	PollIntervalSeconds   int    `env:"POLL_INTERVAL"`
 	ReportIntervalSeconds int    `env:"REPORT_INTERVAL"`
 	LogLevel              string `env:"LOG_LEVEL"`
+	SignKey               string `env:"KEY"`
 }
 
 func New() (*Config, error) {
@@ -20,6 +21,7 @@ func New() (*Config, error) {
 	flag.IntVar(&config.PollIntervalSeconds, "p", 2, "metrics poll interval is seconds")
 	flag.IntVar(&config.ReportIntervalSeconds, "r", 10, "metrics send interval in seconds")
 	flag.StringVar(&config.LogLevel, "l", "warn", "log level")
+	flag.StringVar(&config.SignKey, "k", "", "key will be used for signing data from agent")
 	flag.Parse()
 
 	err := env.Parse(config)

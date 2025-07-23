@@ -13,6 +13,7 @@ type Config struct {
 	FileStoragePath      string `env:"FILE_STORAGE_PATH"`
 	IsRestoreFromFile    bool   `env:"RESTORE"`
 	DatabaseDSN          string `env:"DATABASE_DSN"`
+	SignKey              string `env:"KEY"`
 }
 
 func New() (*Config, error) {
@@ -24,6 +25,7 @@ func New() (*Config, error) {
 	flag.StringVar(&config.FileStoragePath, "f", "", "file storage name")               //FileStorage\\default.txt
 	flag.BoolVar(&config.IsRestoreFromFile, "r", false, "is need to restore data from existed f file")
 	flag.StringVar(&config.DatabaseDSN, "d", "", "database connection string") //postgres://postgres:postgres@localhost:5432/gotplmetrics
+	flag.StringVar(&config.SignKey, "k", "", "key will be used for signing and verifying data")
 	flag.Parse()
 
 	err := env.Parse(config)

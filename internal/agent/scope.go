@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/Soliard/go-tpl-metrics/internal/compressor"
+	"github.com/Soliard/go-tpl-metrics/internal/signer"
 	"github.com/Soliard/go-tpl-metrics/models"
 	"go.uber.org/zap"
 )
@@ -64,6 +65,12 @@ func (a *Agent) reportMetricsBatch() error {
 	req.Header.Set("Content-Encoding", "gzip")
 	// resty позаботится о асептинге gzip и о расшифровке тела ответа из gzip
 	req.Header.Set("Accept", "application/json")
+
+	if a.hasSignKey() {
+		signature := signer.Sign(body, a.signKey)
+		req.Header.Set("HashSHA256", signer.EncodeSign(signature))
+	}
+
 	req.SetBody(compBody)
 
 	res, err := req.Post(url)
