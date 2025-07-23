@@ -39,7 +39,7 @@ func (s *memStorage) UpdateMetric(ctx context.Context, metric *models.Metrics) (
 	}
 
 	if existed.MType != metric.MType {
-		return nil, errors.New("trying to update existed metric with same id, but new mtype")
+		return nil, ErrInvalidMetricReceived
 	}
 
 	// updating existing metric

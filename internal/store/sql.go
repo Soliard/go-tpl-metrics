@@ -49,6 +49,7 @@ func NewDatabaseStorage(ctx context.Context, databaseDSN string) (Storage, error
 	return &DatabaseStorage{db: db}, nil
 }
 
+// TODO validate every metric with type of existed metric before update
 func (s *DatabaseStorage) UpdateMetrics(ctx context.Context, metrics []*models.Metrics) error {
 	query := `
 	INSERT INTO metrics (id, type, value, delta, hash)
@@ -88,6 +89,16 @@ func (s *DatabaseStorage) UpdateMetrics(ctx context.Context, metrics []*models.M
 }
 
 func (s *DatabaseStorage) UpdateMetric(ctx context.Context, metric *models.Metrics) (*models.Metrics, error) {
+	existed, err := s.GetMetric(ctx, metric.ID)
+	if err != nil && !errors.Is(err, ErrNotFound) {
+		return nil, err
+	}
+	if err == nil {
+		if existed.MType != metric.MType {
+			return nil, ErrInvalidMetricReceived
+		}
+	}
+
 	var query string
 	var args []interface{}
 
@@ -113,7 +124,7 @@ func (s *DatabaseStorage) UpdateMetric(ctx context.Context, metric *models.Metri
 		return nil, ErrInvalidMetricReceived
 	}
 
-	_, err := s.db.ExecContext(ctx, query, args...)
+	_, err = s.db.ExecContext(ctx, query, args...)
 
 	if err != nil {
 		return nil, err

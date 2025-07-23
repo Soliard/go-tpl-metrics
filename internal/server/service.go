@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/Soliard/go-tpl-metrics/cmd/server/config"
+	"github.com/Soliard/go-tpl-metrics/internal/signer"
 	"github.com/Soliard/go-tpl-metrics/internal/store"
 	"github.com/Soliard/go-tpl-metrics/models"
 	"github.com/jackc/pgerrcode"
@@ -18,6 +19,7 @@ type MetricsService struct {
 	ServerHost string
 	storage    store.Storage
 	Logger     *zap.Logger
+	signKey    []byte
 }
 
 var maxRetries = 3
@@ -27,6 +29,7 @@ func NewMetricsService(storage store.Storage, config *config.Config, logger *zap
 		storage:    storage,
 		ServerHost: config.ServerHost,
 		Logger:     logger,
+		signKey:    []byte(config.SignKey),
 	}
 }
 
@@ -135,4 +138,8 @@ func isRetriableError(err error) bool {
 		return true
 	}
 	return false
+}
+
+func (s *MetricsService) hasSignKey() bool {
+	return signer.SignKeyExists(s.signKey)
 }

@@ -18,14 +18,15 @@ func (s *MetricsService) MetricsPageHandler(res http.ResponseWriter, req *http.R
 	tmpl, err := template.New("metrics").Parse(templates.MetricsTemplate)
 
 	if err != nil {
-		http.Error(res, "Error loading template: "+err.Error(), http.StatusInternalServerError)
+		logger.Error("error while loading template", zap.Error(err))
+		http.Error(res, "error while loading page", http.StatusInternalServerError)
 		return
 	}
 
 	data, err := s.storage.GetAllMetrics(ctx)
 	if err != nil {
 		logger.Error("error while getting all metrics for page table", zap.Error(err))
-		http.Error(res, "somthing went wrong", http.StatusInternalServerError)
+		http.Error(res, "something went wrong", http.StatusInternalServerError)
 	}
 
 	sort.Slice(data, func(i, j int) bool {

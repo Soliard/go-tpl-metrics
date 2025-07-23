@@ -10,7 +10,6 @@ import (
 	"go.uber.org/zap"
 )
 
-// обертка для ответа чтобы увидеть его данные перед отпавкой клиенту
 type bufferWriter struct {
 	http.ResponseWriter
 	headers    http.Header

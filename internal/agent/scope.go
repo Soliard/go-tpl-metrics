@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/Soliard/go-tpl-metrics/internal/compressor"
+	"github.com/Soliard/go-tpl-metrics/internal/signer"
 	"github.com/Soliard/go-tpl-metrics/models"
 	"go.uber.org/zap"
 )
@@ -64,19 +65,27 @@ func (a *Agent) reportMetricsBatch() error {
 	req.Header.Set("Content-Encoding", "gzip")
 	// resty позаботится о асептинге gzip и о расшифровке тела ответа из gzip
 	req.Header.Set("Accept", "application/json")
+
+	if a.hasSignKey() {
+		signature := signer.Sign(compBody, a.signKey)
+		req.Header.Set("HashSHA256", signer.EncodeSign(signature))
+	}
+
 	req.SetBody(compBody)
 
 	res, err := req.Post(url)
 	if err != nil {
 		a.Logger.Error("error while send metrics to server",
-			zap.Error(err))
+			zap.Error(err),
+			zap.String("recieved body", string(res.Body())))
 		return err
 	}
 
 	//проверяем ответ
 	if res.StatusCode() != http.StatusOK {
 		a.Logger.Error("server returned not ok response for sended metrics",
-			zap.Int("statuscode", res.StatusCode()))
+			zap.Int("statuscode", res.StatusCode()),
+			zap.String("recieved body", string(res.Body())))
 		return errors.New("server returned not ok response for sended metrics")
 	}
 
@@ -115,6 +124,12 @@ func (a *Agent) sendMetricJSON(metric *models.Metrics) error {
 	req.Header.Set("Content-Encoding", "gzip")
 	// resty позаботится о асептинге gzip и о расшифровке тела ответа из gzip
 	req.Header.Set("Accept", "application/json")
+
+	if a.hasSignKey() {
+		signature := signer.Sign(compressed, a.signKey)
+		req.Header.Set("HashSHA256", signer.EncodeSign(signature))
+	}
+
 	req.SetBody(compressed)
 
 	res, err := req.Post(url)
