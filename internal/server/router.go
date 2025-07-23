@@ -11,26 +11,36 @@ import (
 
 func MetricRouter(s *MetricsService) chi.Router {
 	r := chi.NewRouter()
-	r.Use(
-		logger.LoggingMiddleware(s.Logger),
-		signer.VerifySignatureMiddleware(s.signKey, s.Logger),
-		compressor.GzipMiddleware(s.Logger),
-	)
-	r.Get("/", s.MetricsPageHandler)
-	r.Route("/update", func(r chi.Router) {
-		r.Post("/", s.UpdateHandler)
-		r.Post("/{type}", func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusNotFound) })
-		r.Post("/{type}/{name}", func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusBadRequest) })
-		r.Post("/{type}/{name}/{value}", s.UpdateViaURLHandler)
+	r.Use(logger.LoggingMiddleware(s.Logger))
+
+	// эндпоинты без подписи
+	r.Group(func(r chi.Router) {
+		r.Use(compressor.GzipMiddleware(s.Logger))
+		r.Get("/", s.MetricsPageHandler)
+		r.Get("/ping", s.PingHandler)
+		r.Route("/value", func(r chi.Router) {
+			r.Post("/", s.ValueHandler)
+			r.Get("/{type}/{name}", s.ValueViaURLHandler)
+		})
+		r.Route("/update", func(r chi.Router) {
+			r.Post("/", s.UpdateHandler)
+			r.Post("/{type}", func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusNotFound) })
+			r.Post("/{type}/{name}", func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusBadRequest) })
+			r.Post("/{type}/{name}/{value}", s.UpdateViaURLHandler)
+		})
 	})
-	r.Route("/updates", func(r chi.Router) {
-		r.Post("/", s.UpdatesHandler)
+
+	// эндпоинты с подписью
+	r.Group(func(r chi.Router) {
+		r.Use(
+			signer.VerifySignatureMiddleware(s.signKey, s.Logger),
+			signer.SignResponseMiddleware(s.signKey, s.Logger),
+			compressor.GzipMiddleware(s.Logger),
+		)
+		r.Route("/updates", func(r chi.Router) {
+			r.Post("/", s.UpdatesHandler)
+		})
 	})
-	r.Route("/value", func(r chi.Router) {
-		r.Post("/", s.ValueHandler)
-		r.Get("/{type}/{name}", s.ValueViaURLHandler)
-	})
-	r.Get("/ping", s.PingHandler)
 
 	return r
 }
