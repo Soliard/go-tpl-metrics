@@ -38,13 +38,13 @@ func (a *Agent) Run(ctx context.Context) {
 
 func (a *Agent) Sender(ctx context.Context, id int, jobs <-chan []*models.Metrics, sem *semaphore.Weighted) {
 	for j := range jobs {
+		time.Sleep(a.reportInterval)
 		sem.Acquire(ctx, 1)
 		err := a.reportMetricsBatch(j)
 		sem.Release(1)
 		if err != nil {
 			a.Logger.Error("error while sending metrics", zap.Error(err))
 		}
-		time.Sleep(a.reportInterval)
 	}
 }
 

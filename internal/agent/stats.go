@@ -16,6 +16,7 @@ func (a *Agent) Collector(id int, result chan<- []*models.Metrics) {
 	var m runtime.MemStats
 	polCount := 0
 	for {
+		time.Sleep(a.pollInterval)
 		runtime.ReadMemStats(&m)
 		batch := make([]*models.Metrics, 0, 28)
 		polCount++
@@ -54,12 +55,12 @@ func (a *Agent) Collector(id int, result chan<- []*models.Metrics) {
 		result <- batch
 
 		a.Logger.Info("memory stats colected by collector", zap.Int("collector id", id))
-		time.Sleep(a.pollInterval)
 	}
 }
 
 func (a *Agent) CollectorPS(id int, result chan<- []*models.Metrics) {
 	for {
+		time.Sleep(a.pollInterval)
 		memory, err := mem.VirtualMemory()
 		if err != nil {
 			a.Logger.Error("failed to get memory stats", zap.Error(err))
@@ -85,6 +86,5 @@ func (a *Agent) CollectorPS(id int, result chan<- []*models.Metrics) {
 		result <- batch
 
 		a.Logger.Info("ps stats colected by collectorps", zap.Int("collectorps id", id))
-		time.Sleep(a.pollInterval)
 	}
 }
