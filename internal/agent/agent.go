@@ -11,13 +11,13 @@ import (
 )
 
 type Agent struct {
-	serverHostURL  string
-	collector      *StatsCollector
-	httpClient     *resty.Client
-	Logger         *zap.Logger
-	pollInterval   time.Duration
-	reportInterval time.Duration
-	signKey        []byte
+	serverHostURL    string
+	httpClient       *resty.Client
+	Logger           *zap.Logger
+	pollInterval     time.Duration
+	reportInterval   time.Duration
+	signKey          []byte
+	requestRateLimit int
 }
 
 func New(config *config.Config, logger *zap.Logger) *Agent {
@@ -26,13 +26,13 @@ func New(config *config.Config, logger *zap.Logger) *Agent {
 		SetRetryMaxWaitTime(2)
 
 	return &Agent{
-		serverHostURL:  normalizeServerURL(config.ServerHost),
-		collector:      NewStatsCollector(),
-		httpClient:     client,
-		Logger:         logger,
-		pollInterval:   time.Second * time.Duration(config.PollIntervalSeconds),
-		reportInterval: time.Second * time.Duration(config.ReportIntervalSeconds),
-		signKey:        []byte(config.SignKey),
+		serverHostURL:    normalizeServerURL(config.ServerHost),
+		httpClient:       client,
+		Logger:           logger,
+		pollInterval:     time.Second * time.Duration(config.PollIntervalSeconds),
+		reportInterval:   time.Second * time.Duration(config.ReportIntervalSeconds),
+		signKey:          []byte(config.SignKey),
+		requestRateLimit: config.RequestsLimit,
 	}
 }
 
