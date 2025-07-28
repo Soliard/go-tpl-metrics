@@ -18,18 +18,18 @@ import (
 
 func (a *Agent) Run(ctx context.Context) {
 
-	jobs := make(chan []*models.Metrics, 3)
+	jobs := make(chan []*models.Metrics, 10)
 	sem := semaphore.NewWeighted(int64(a.requestRateLimit))
 
-	for c := 1; c <= 3; c++ {
+	for c := 1; c < 2; c++ {
 		go a.Collector(c, jobs)
 	}
 
-	for c := 1; c <= 3; c++ {
+	for c := 1; c < 2; c++ {
 		go a.CollectorPS(c, jobs)
 	}
 
-	for s := 1; s <= 3; s++ {
+	for s := 1; s < 4; s++ {
 		go a.Sender(ctx, s, jobs, sem)
 	}
 
@@ -37,13 +37,21 @@ func (a *Agent) Run(ctx context.Context) {
 }
 
 func (a *Agent) Sender(ctx context.Context, id int, jobs <-chan []*models.Metrics, sem *semaphore.Weighted) {
-	for j := range jobs {
-		time.Sleep(a.reportInterval)
-		sem.Acquire(ctx, 1)
-		err := a.reportMetricsBatch(j)
-		sem.Release(1)
-		if err != nil {
-			a.Logger.Error("error while sending metrics", zap.Error(err))
+	for {
+		select {
+		case j := <-jobs:
+			time.Sleep(a.reportInterval)
+			if err := sem.Acquire(ctx, 1); err != nil {
+				a.Logger.Error("failed to acquire semaphore", zap.Error(err))
+				continue
+			}
+			err := a.reportMetricsBatch(j)
+			sem.Release(1)
+			if err != nil {
+				a.Logger.Error("error while sending metrics", zap.Error(err))
+			}
+		case <-ctx.Done():
+			return
 		}
 	}
 }

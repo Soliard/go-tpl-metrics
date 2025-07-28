@@ -70,13 +70,13 @@ func (s *MetricsService) ValueViaURLHandler(res http.ResponseWriter, req *http.R
 		http.Error(res, `invalid metric type`, http.StatusNotFound)
 		return
 	}
+
+	res.Header().Set("Content-Type", "plain/text; charset=utf-8")
+	res.WriteHeader(http.StatusOK)
 	if m.MType == models.Counter {
 		res.Write([]byte(metric.StringifyDelta()))
 	}
 	if metric.MType == models.Gauge {
 		res.Write([]byte(metric.StringifyValue()))
 	}
-
-	res.Header().Set("Content-Type", "plain/text; charset=utf-8")
-	res.WriteHeader(http.StatusOK)
 }
