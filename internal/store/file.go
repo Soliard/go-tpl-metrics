@@ -33,7 +33,15 @@ func NewFileStorage(filePath string, isRestore bool) (Storage, error) {
 }
 
 func (s *fileStorage) UpdateMetrics(ctx context.Context, metrics []*models.Metrics) error {
-	return s.memory.UpdateMetrics(ctx, metrics)
+	err := s.memory.UpdateMetrics(ctx, metrics)
+	if err != nil {
+		return err
+	}
+	err = s.saveMemoryToFile()
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (s *fileStorage) UpdateMetric(ctx context.Context, metric *models.Metrics) (*models.Metrics, error) {

@@ -1,78 +1,90 @@
 package agent
 
 import (
-	"errors"
+	"fmt"
 	"math/rand"
 	"runtime"
+	"time"
 
 	"github.com/Soliard/go-tpl-metrics/models"
+	"github.com/shirou/gopsutil/cpu"
+	"github.com/shirou/gopsutil/v4/mem"
+	"go.uber.org/zap"
 )
 
-type StatsCollector struct {
-	Metrics map[string]*models.Metrics
-}
-
-func NewStatsCollector() *StatsCollector {
-	return &StatsCollector{
-		Metrics: map[string]*models.Metrics{},
-	}
-}
-
-func (s *StatsCollector) UpdateGauge(id string, value float64) {
-	if v, ok := s.Metrics[id]; ok {
-		if v.MType != models.Gauge {
-			panic(errors.New("collector trying to update counter metric with gauge value"))
-		}
-		v.Value = &value
-	} else {
-		s.Metrics[id] = models.NewGaugeMetric(id, value)
-	}
-}
-
-func (s *StatsCollector) UpdateCounter(id string) {
-	if v, ok := s.Metrics[id]; ok {
-		if v.MType != models.Counter {
-			panic(errors.New("collector trying to update gauge metric with counter value"))
-		}
-		*v.Delta += 1
-	} else {
-		s.Metrics[id] = models.NewCounterMetric(id, 1)
-	}
-}
-
-func (s *StatsCollector) Collect() error {
+func (a *Agent) Collector(id int, result chan<- []*models.Metrics) {
 	var m runtime.MemStats
-	runtime.ReadMemStats(&m)
-	s.UpdateGauge("Alloc", float64(m.Alloc))
-	s.UpdateGauge("BuckHashSys", float64(m.BuckHashSys))
-	s.UpdateGauge("Frees", float64(m.Frees))
-	s.UpdateGauge("GCCPUFraction", float64(m.GCCPUFraction))
-	s.UpdateGauge("GCSys", float64(m.GCSys))
-	s.UpdateGauge("HeapAlloc", float64(m.HeapAlloc))
-	s.UpdateGauge("HeapIdle", float64(m.HeapIdle))
-	s.UpdateGauge("HeapInuse", float64(m.HeapInuse))
-	s.UpdateGauge("HeapObjects", float64(m.HeapObjects))
-	s.UpdateGauge("HeapReleased", float64(m.HeapReleased))
-	s.UpdateGauge("HeapSys", float64(m.HeapSys))
-	s.UpdateGauge("LastGC", float64(m.LastGC))
-	s.UpdateGauge("Lookups", float64(m.Lookups))
-	s.UpdateGauge("MCacheInuse", float64(m.MCacheInuse))
-	s.UpdateGauge("MCacheSys", float64(m.MCacheSys))
-	s.UpdateGauge("MSpanInuse", float64(m.MSpanInuse))
-	s.UpdateGauge("MSpanSys", float64(m.MSpanSys))
-	s.UpdateGauge("Mallocs", float64(m.Mallocs))
-	s.UpdateGauge("NextGC", float64(m.NextGC))
-	s.UpdateGauge("NumForcedGC", float64(m.NumForcedGC))
-	s.UpdateGauge("NumGC", float64(m.NumGC))
-	s.UpdateGauge("OtherSys", float64(m.OtherSys))
-	s.UpdateGauge("PauseTotalNs", float64(m.PauseTotalNs))
-	s.UpdateGauge("StackInuse", float64(m.StackInuse))
-	s.UpdateGauge("StackSys", float64(m.StackSys))
-	s.UpdateGauge("Sys", float64(m.Sys))
-	s.UpdateGauge("TotalAlloc", float64(m.TotalAlloc))
-	s.UpdateGauge("RandomValue", float64(rand.Float64()))
+	polCount := 0
+	for {
+		time.Sleep(a.pollInterval)
+		runtime.ReadMemStats(&m)
+		batch := make([]*models.Metrics, 0, 28)
+		polCount++
+		batch = append(batch,
+			models.NewGaugeMetric("Alloc", float64(m.Alloc)),
+			models.NewGaugeMetric("BuckHashSys", float64(m.BuckHashSys)),
+			models.NewGaugeMetric("Frees", float64(m.Frees)),
+			models.NewGaugeMetric("GCCPUFraction", float64(m.GCCPUFraction)),
+			models.NewGaugeMetric("GCSys", float64(m.GCSys)),
+			models.NewGaugeMetric("HeapAlloc", float64(m.HeapAlloc)),
+			models.NewGaugeMetric("HeapIdle", float64(m.HeapIdle)),
+			models.NewGaugeMetric("HeapInuse", float64(m.HeapInuse)),
+			models.NewGaugeMetric("HeapObjects", float64(m.HeapObjects)),
+			models.NewGaugeMetric("HeapReleased", float64(m.HeapReleased)),
+			models.NewGaugeMetric("HeapSys", float64(m.HeapSys)),
+			models.NewGaugeMetric("LastGC", float64(m.LastGC)),
+			models.NewGaugeMetric("Lookups", float64(m.Lookups)),
+			models.NewGaugeMetric("MCacheInuse", float64(m.MCacheInuse)),
+			models.NewGaugeMetric("MCacheSys", float64(m.MCacheSys)),
+			models.NewGaugeMetric("MSpanInuse", float64(m.MSpanInuse)),
+			models.NewGaugeMetric("MSpanSys", float64(m.MSpanSys)),
+			models.NewGaugeMetric("Mallocs", float64(m.Mallocs)),
+			models.NewGaugeMetric("NextGC", float64(m.NextGC)),
+			models.NewGaugeMetric("NumForcedGC", float64(m.NumForcedGC)),
+			models.NewGaugeMetric("NumGC", float64(m.NumGC)),
+			models.NewGaugeMetric("OtherSys", float64(m.OtherSys)),
+			models.NewGaugeMetric("PauseTotalNs", float64(m.PauseTotalNs)),
+			models.NewGaugeMetric("StackInuse", float64(m.StackInuse)),
+			models.NewGaugeMetric("StackSys", float64(m.StackSys)),
+			models.NewGaugeMetric("Sys", float64(m.Sys)),
+			models.NewGaugeMetric("TotalAlloc", float64(m.TotalAlloc)),
+			models.NewGaugeMetric("RandomValue", float64(rand.Float64())),
+			models.NewCounterMetric("PollCount", int64(polCount)),
+		)
 
-	s.UpdateCounter("PollCount")
+		result <- batch
 
-	return nil
+		a.Logger.Info("memory stats colected by collector", zap.Int("collector id", id))
+	}
+}
+
+func (a *Agent) CollectorPS(id int, result chan<- []*models.Metrics) {
+	for {
+		time.Sleep(a.pollInterval)
+		memory, err := mem.VirtualMemory()
+		if err != nil {
+			a.Logger.Error("failed to get memory stats", zap.Error(err))
+			time.Sleep(a.pollInterval)
+			continue
+		}
+
+		cpuPercents, err := cpu.Percent(time.Second, true)
+		if err != nil {
+			a.Logger.Error("failed to get CPU stats", zap.Error(err))
+			time.Sleep(a.pollInterval)
+			continue
+		}
+
+		batch := make([]*models.Metrics, 0, len(cpuPercents)+2)
+		batch = append(batch,
+			models.NewGaugeMetric("TotalMemory", float64(memory.Total)),
+			models.NewGaugeMetric("FreeMemory", float64(memory.Free)),
+		)
+		for i, c := range cpuPercents {
+			batch = append(batch, models.NewGaugeMetric(fmt.Sprint("CPUutilization", i), c))
+		}
+		result <- batch
+
+		a.Logger.Info("ps stats colected by collectorps", zap.Int("collectorps id", id))
+	}
 }

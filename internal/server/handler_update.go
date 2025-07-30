@@ -17,7 +17,7 @@ import (
 func (s *MetricsService) UpdatesHandler(res http.ResponseWriter, req *http.Request) {
 	ctx := req.Context()
 	logger := logger.LoggerFromCtx(ctx, s.Logger)
-	if req.Header.Get("Content-type") != "application/json" {
+	if req.Header.Get("Content-Type") != "application/json" {
 		http.Error(res, "only application/json content accepting", http.StatusBadRequest)
 		return
 	}

@@ -13,7 +13,7 @@ import (
 func (s *MetricsService) ValueHandler(res http.ResponseWriter, req *http.Request) {
 	ctx := req.Context()
 	res.Header().Set("Content-Type", "application/json")
-	if req.Header.Get("Content-type") != "application/json" {
+	if req.Header.Get("Content-Type") != "application/json" {
 		http.Error(res, "only application/json content accepting", http.StatusBadRequest)
 		return
 	}
@@ -28,12 +28,11 @@ func (s *MetricsService) ValueHandler(res http.ResponseWriter, req *http.Request
 	retMetric, err := s.GetMetric(ctx, metric.ID)
 	if err != nil {
 		if errors.Is(err, store.ErrNotFound) {
-			http.Error(res, `metric with this name doesnt exists`, http.StatusNotFound)
+			http.Error(res, "metric with this name doesnt exists", http.StatusNotFound)
 			return
 		}
-		http.Error(res, `error while getting metric`, http.StatusInternalServerError)
+		http.Error(res, "error while getting metric", http.StatusInternalServerError)
 		return
-
 	}
 	retBody, err := json.Marshal(retMetric)
 	if err != nil {
@@ -71,13 +70,13 @@ func (s *MetricsService) ValueViaURLHandler(res http.ResponseWriter, req *http.R
 		http.Error(res, `invalid metric type`, http.StatusNotFound)
 		return
 	}
+
+	res.Header().Set("Content-Type", "plain/text; charset=utf-8")
+	res.WriteHeader(http.StatusOK)
 	if m.MType == models.Counter {
 		res.Write([]byte(metric.StringifyDelta()))
 	}
 	if metric.MType == models.Gauge {
 		res.Write([]byte(metric.StringifyValue()))
 	}
-
-	res.Header().Set("Content-Type", "plain/text; charset=utf-8")
-	res.WriteHeader(http.StatusOK)
 }

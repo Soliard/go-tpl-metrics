@@ -32,10 +32,6 @@ func setupTestAgent(serverHost string) *Agent {
 func TestNewAgent(t *testing.T) {
 	agent := setupTestAgent("")
 
-	if agent.collector == nil {
-		t.Error("Expected collector to be initialized")
-	}
-
 	if agent.httpClient == nil {
 		t.Error("Expected httpClient to be initialized")
 	}

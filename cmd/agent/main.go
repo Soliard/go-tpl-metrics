@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log"
 	"os"
 
@@ -26,5 +27,6 @@ func main() {
 
 	agent := agent.New(config, logger)
 	logger.Info("agent works with service on", zap.String("serverhost", config.ServerHost))
-	agent.Run()
+	ctx := context.Background()
+	agent.Run(ctx)
 }

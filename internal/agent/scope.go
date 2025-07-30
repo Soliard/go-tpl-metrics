@@ -1,58 +1,69 @@
 package agent
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"maps"
 	"net/http"
 	"net/url"
-	"slices"
 	"time"
 
 	"github.com/Soliard/go-tpl-metrics/internal/compressor"
+	"github.com/Soliard/go-tpl-metrics/internal/signer"
 	"github.com/Soliard/go-tpl-metrics/models"
 	"go.uber.org/zap"
+	"golang.org/x/sync/semaphore"
 )
 
-func (a *Agent) Run() {
-	ticker := time.NewTicker(time.Second) // минимальный интервал
-	defer ticker.Stop()
+func (a *Agent) Run(ctx context.Context) {
 
-	pollCounter := 0
-	reportCounter := 0
+	jobs := make(chan []*models.Metrics, 10)
+	sem := semaphore.NewWeighted(int64(a.requestRateLimit))
 
+	for c := 1; c < 2; c++ {
+		go a.Collector(c, jobs)
+	}
+
+	for c := 1; c < 2; c++ {
+		go a.CollectorPS(c, jobs)
+	}
+
+	for s := 1; s < 4; s++ {
+		go a.Sender(ctx, s, jobs, sem)
+	}
+
+	<-ctx.Done()
+}
+
+func (a *Agent) Sender(ctx context.Context, id int, jobs <-chan []*models.Metrics, sem *semaphore.Weighted) {
 	for {
-		time.Sleep(time.Second)
-		pollCounter++
-		reportCounter++
-
-		if pollCounter >= int(a.pollInterval.Seconds()) {
-			if err := a.collector.Collect(); err != nil {
-				a.Logger.Error("error while collection metrics", zap.Error(err))
+		select {
+		case j := <-jobs:
+			time.Sleep(a.reportInterval)
+			if err := sem.Acquire(ctx, 1); err != nil {
+				a.Logger.Error("failed to acquire semaphore", zap.Error(err))
+				continue
 			}
-			a.Logger.Info("stats collected")
-			pollCounter = 0
-		}
-
-		if reportCounter >= int(a.reportInterval.Seconds()) {
-			if err := a.reportMetricsBatch(); err != nil {
-				a.Logger.Error("error while reporting metrics", zap.Error(err))
+			err := a.reportMetricsBatch(j)
+			sem.Release(1)
+			if err != nil {
+				a.Logger.Error("error while sending metrics", zap.Error(err))
 			}
-			a.Logger.Warn("stats reported")
-			reportCounter = 0
+		case <-ctx.Done():
+			return
 		}
 	}
 }
 
-func (a *Agent) reportMetricsBatch() error {
+func (a *Agent) reportMetricsBatch(metrics []*models.Metrics) error {
 	url, err := url.JoinPath(a.serverHostURL, "updates")
 	if err != nil {
 		return err
 	}
 	req := a.httpClient.R()
 
-	body, err := json.Marshal(slices.Collect(maps.Values(a.collector.Metrics)))
+	body, err := json.Marshal(metrics)
 	if err != nil {
 		return fmt.Errorf("cant marshal metrics: %v", err)
 	}
@@ -64,34 +75,29 @@ func (a *Agent) reportMetricsBatch() error {
 	req.Header.Set("Content-Encoding", "gzip")
 	// resty позаботится о асептинге gzip и о расшифровке тела ответа из gzip
 	req.Header.Set("Accept", "application/json")
+
+	if a.hasSignKey() {
+		signature := signer.Sign(compBody, a.signKey)
+		req.Header.Set("HashSHA256", signer.EncodeSign(signature))
+	}
+
 	req.SetBody(compBody)
 
 	res, err := req.Post(url)
 	if err != nil {
 		a.Logger.Error("error while send metrics to server",
-			zap.Error(err))
+			zap.Error(err),
+			zap.String("recieved body", string(res.Body())))
 		return err
 	}
 
 	//проверяем ответ
 	if res.StatusCode() != http.StatusOK {
 		a.Logger.Error("server returned not ok response for sended metrics",
-			zap.Int("statuscode", res.StatusCode()))
+			zap.Int("statuscode", res.StatusCode()),
+			zap.String("recieved body", string(res.Body())))
 		return errors.New("server returned not ok response for sended metrics")
 	}
-
-	return nil
-}
-
-func (a *Agent) reportMetrics() error {
-	for _, value := range a.collector.Metrics {
-		err := a.sendMetricJSON(value)
-		if err != nil {
-			return err
-		}
-	}
-
-	a.Logger.Info("Metrics reported to the server")
 
 	return nil
 }
@@ -115,6 +121,12 @@ func (a *Agent) sendMetricJSON(metric *models.Metrics) error {
 	req.Header.Set("Content-Encoding", "gzip")
 	// resty позаботится о асептинге gzip и о расшифровке тела ответа из gzip
 	req.Header.Set("Accept", "application/json")
+
+	if a.hasSignKey() {
+		signature := signer.Sign(compressed, a.signKey)
+		req.Header.Set("HashSHA256", signer.EncodeSign(signature))
+	}
+
 	req.SetBody(compressed)
 
 	res, err := req.Post(url)
