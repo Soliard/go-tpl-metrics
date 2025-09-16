@@ -3,14 +3,33 @@ package compressor
 import (
 	"bytes"
 	"compress/gzip"
+	"io"
+	"sync"
+)
+
+var (
+	gzipWriterPool = sync.Pool{
+		New: func() interface{} {
+			gz, _ := gzip.NewWriterLevel(io.Discard, gzip.BestSpeed)
+			return gz
+		},
+	}
+
+	bufferPool = sync.Pool{
+		New: func() interface{} {
+			return new(bytes.Buffer)
+		},
+	}
 )
 
 func CompressData(data []byte) ([]byte, error) {
-	compBuf := &bytes.Buffer{}
-	gz, err := gzip.NewWriterLevel(compBuf, gzip.BestSpeed)
-	if err != nil {
-		return nil, err
-	}
+	buf := bufferPool.Get().(*bytes.Buffer)
+	buf.Reset()
+	defer bufferPool.Put(buf)
+
+	gz := gzipWriterPool.Get().(*gzip.Writer)
+	gz.Reset(buf)
+	defer gzipWriterPool.Put(gz)
 
 	if _, err := gz.Write(data); err != nil {
 		return nil, err
@@ -20,7 +39,7 @@ func CompressData(data []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	return compBuf.Bytes(), nil
+	return buf.Bytes(), nil
 }
 
 func UncompressData(data []byte) ([]byte, error) {
