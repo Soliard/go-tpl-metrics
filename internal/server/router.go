@@ -2,6 +2,7 @@ package server
 
 import (
 	"net/http"
+	_ "net/http/pprof"
 
 	"github.com/Soliard/go-tpl-metrics/internal/compressor"
 	"github.com/Soliard/go-tpl-metrics/internal/logger"
@@ -41,6 +42,8 @@ func MetricRouter(s *MetricsService) chi.Router {
 			r.Post("/", s.UpdatesHandler)
 		})
 	})
+
+	r.Mount("/debug/pprof", http.DefaultServeMux)
 
 	return r
 }
