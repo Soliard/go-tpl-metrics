@@ -11,6 +11,8 @@ import (
 	"go.uber.org/zap"
 )
 
+// MetricsPageHandler обрабатывает запрос на главную страницу с метриками.
+// Возвращает HTML страницу с таблицей всех метрик, отсортированных по имени.
 func (s *MetricsService) MetricsPageHandler(res http.ResponseWriter, req *http.Request) {
 	ctx := req.Context()
 	logger := logger.LoggerFromCtx(ctx, s.Logger)

@@ -6,6 +6,9 @@ import (
 	"github.com/Soliard/go-tpl-metrics/internal/store"
 )
 
+// PingHandler обрабатывает запросы на проверку состояния сервера.
+// Если используется база данных, проверяет соединение с ней.
+// Возвращает 200 OK если сервер работает, 500 если есть проблемы с БД.
 func (s *MetricsService) PingHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 

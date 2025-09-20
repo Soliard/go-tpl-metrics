@@ -1,3 +1,5 @@
+// Package config предоставляет конфигурацию для сервера метрик.
+// Поддерживает настройку через флаги командной строки и переменные окружения.
 package config
 
 import (
@@ -6,16 +8,19 @@ import (
 	"github.com/caarlos0/env/v6"
 )
 
+// Config содержит все настройки сервера метрик
 type Config struct {
-	ServerHost           string `env:"ADDRESS"`
-	LogLevel             string `env:"LOG_LEVEL"`
-	StoreIntervalSeconds int    `env:"STORE_INTERVAL"`
-	FileStoragePath      string `env:"FILE_STORAGE_PATH"`
-	IsRestoreFromFile    bool   `env:"RESTORE"`
-	DatabaseDSN          string `env:"DATABASE_DSN"`
-	SignKey              string `env:"KEY"`
+	ServerHost           string `env:"ADDRESS"`           // адрес сервера
+	LogLevel             string `env:"LOG_LEVEL"`         // уровень логирования
+	StoreIntervalSeconds int    `env:"STORE_INTERVAL"`    // интервал сохранения (не используется)
+	FileStoragePath      string `env:"FILE_STORAGE_PATH"` // путь к файлу хранилища
+	IsRestoreFromFile    bool   `env:"RESTORE"`           // восстанавливать из файла при запуске
+	DatabaseDSN          string `env:"DATABASE_DSN"`      // строка подключения к БД
+	SignKey              string `env:"KEY"`               // ключ для подписи данных
 }
 
+// New создает новую конфигурацию сервера.
+// Парсит флаги командной строки и переменные окружения.
 func New() (*Config, error) {
 	config := &Config{}
 

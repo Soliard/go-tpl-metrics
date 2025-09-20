@@ -34,6 +34,8 @@ func (r *loggingResponseWriter) WriteHeader(statusCode int) {
 	r.responseData.status = statusCode // захватываем код статуса
 }
 
+// LoggingMiddleware создает HTTP middleware для логирования запросов и ответов.
+// Логирует URL, метод, время выполнения, размер ответа и статус код.
 func LoggingMiddleware(log *zap.Logger) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

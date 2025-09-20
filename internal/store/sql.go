@@ -13,10 +13,14 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
+// DatabaseStorage реализует Storage интерфейс для хранения метрик в PostgreSQL.
+// Автоматически выполняет миграции при создании.
 type DatabaseStorage struct {
 	db *sqlx.DB
 }
 
+// NewDatabaseStorage создает новое хранилище в базе данных PostgreSQL.
+// Выполняет миграции из папки cmd/server/migrations.
 func NewDatabaseStorage(ctx context.Context, databaseDSN string) (Storage, error) {
 	db, err := sqlx.Open("pgx", databaseDSN)
 	if err != nil {
@@ -49,7 +53,8 @@ func NewDatabaseStorage(ctx context.Context, databaseDSN string) (Storage, error
 	return &DatabaseStorage{db: db}, nil
 }
 
-// TODO validate every metric with type of existed metric before update
+// UpdateMetrics обновляет несколько метрик в базе данных за одну транзакцию.
+// Для counter метрик значения суммируются, для gauge - перезаписываются.
 func (s *DatabaseStorage) UpdateMetrics(ctx context.Context, metrics []*models.Metrics) error {
 	query := `
 	INSERT INTO metrics (id, type, value, delta, hash)
@@ -88,6 +93,7 @@ func (s *DatabaseStorage) UpdateMetrics(ctx context.Context, metrics []*models.M
 	return tx.Commit()
 }
 
+// UpdateMetric обновляет или создает одну метрику в базе данных
 func (s *DatabaseStorage) UpdateMetric(ctx context.Context, metric *models.Metrics) (*models.Metrics, error) {
 	existed, err := s.GetMetric(ctx, metric.ID)
 	if err != nil && !errors.Is(err, ErrNotFound) {
@@ -132,6 +138,7 @@ func (s *DatabaseStorage) UpdateMetric(ctx context.Context, metric *models.Metri
 	return metric, nil
 }
 
+// GetMetric получает метрику по имени из базы данных
 func (s *DatabaseStorage) GetMetric(ctx context.Context, name string) (*models.Metrics, error) {
 	query := `
 		SELECT 
@@ -155,6 +162,7 @@ func (s *DatabaseStorage) GetMetric(ctx context.Context, name string) (*models.M
 	return &metric, nil
 }
 
+// GetAllMetrics возвращает все метрики из базы данных
 func (s *DatabaseStorage) GetAllMetrics(ctx context.Context) ([]*models.Metrics, error) {
 	var metrics []*models.Metrics
 	query := `
@@ -186,6 +194,7 @@ func (s *DatabaseStorage) GetAllMetrics(ctx context.Context) ([]*models.Metrics,
 	return metrics, nil
 }
 
+// Ping проверяет соединение с базой данных
 func (s *DatabaseStorage) Ping(ctx context.Context) error {
 	return s.db.PingContext(ctx)
 }

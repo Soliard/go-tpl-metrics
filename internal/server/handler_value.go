@@ -10,6 +10,8 @@ import (
 	"go.uber.org/zap"
 )
 
+// ValueHandler обрабатывает получение метрики через JSON запрос.
+// Принимает метрику с ID в теле запроса и возвращает полную метрику.
 func (s *MetricsService) ValueHandler(res http.ResponseWriter, req *http.Request) {
 	ctx := req.Context()
 	res.Header().Set("Content-Type", "application/json")
@@ -48,6 +50,9 @@ func (s *MetricsService) ValueHandler(res http.ResponseWriter, req *http.Request
 
 }
 
+// ValueViaURLHandler обрабатывает получение метрики через URL параметры.
+// Формат: GET /value/{type}/{name}
+// Возвращает значение метрики в виде текста.
 func (s *MetricsService) ValueViaURLHandler(res http.ResponseWriter, req *http.Request) {
 	ctx := req.Context()
 	m := parseMetricURL(req)

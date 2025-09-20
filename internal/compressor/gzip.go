@@ -1,3 +1,5 @@
+// Package compressor предоставляет утилиты для сжатия и распаковки данных.
+// Использует gzip алгоритм с пулом объектов для оптимизации производительности.
 package compressor
 
 import (
@@ -8,6 +10,7 @@ import (
 )
 
 var (
+	// gzipWriterPool пул gzip.Writer для переиспользования объектов
 	gzipWriterPool = sync.Pool{
 		New: func() interface{} {
 			gz, _ := gzip.NewWriterLevel(io.Discard, gzip.BestSpeed)
@@ -15,6 +18,7 @@ var (
 		},
 	}
 
+	// bufferPool пул bytes.Buffer для переиспользования буферов
 	bufferPool = sync.Pool{
 		New: func() interface{} {
 			return new(bytes.Buffer)
@@ -22,6 +26,8 @@ var (
 	}
 )
 
+// CompressData сжимает данные используя gzip алгоритм.
+// Использует пулы объектов для оптимизации производительности.
 func CompressData(data []byte) ([]byte, error) {
 	buf := bufferPool.Get().(*bytes.Buffer)
 	buf.Reset()
@@ -42,6 +48,7 @@ func CompressData(data []byte) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
+// UncompressData распаковывает данные сжатые gzip алгоритмом.
 func UncompressData(data []byte) ([]byte, error) {
 	gz, err := gzip.NewReader(bytes.NewBuffer(data))
 	if err != nil {
