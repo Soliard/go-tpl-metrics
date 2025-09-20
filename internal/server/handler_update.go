@@ -3,7 +3,6 @@ package server
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"net/http"
 	"strconv"
 
@@ -140,6 +139,5 @@ func parseMetricURL(req *http.Request) models.Metrics {
 		}
 	}
 
-	fmt.Printf("[parseMetricURL] Parsed metric: %s\n", metric.String())
 	return metric
 }
