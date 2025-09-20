@@ -86,7 +86,12 @@ func ExampleMetricsService_ValueHandler() {
 		Value: models.PFloat(75.2),
 	}
 	jsonData, _ := json.Marshal(metric)
-	http.Post(server.URL+"/update", "application/json", bytes.NewBuffer(jsonData))
+	res, err := http.Post(server.URL+"/update", "application/json", bytes.NewBuffer(jsonData))
+	if err != nil {
+		fmt.Printf("Error: %v\n", err)
+		return
+	}
+	defer res.Body.Close()
 
 	// Теперь получаем метрику
 	requestMetric := models.Metrics{ID: "cpu_usage"}
@@ -115,10 +120,15 @@ func ExampleMetricsService_ValueViaURLHandler() {
 	defer server.Close()
 
 	// Сначала создаем метрику
-	http.Post(server.URL+"/update/counter/request_count/5", "text/plain", nil)
+	resp, err := http.Post(server.URL+"/update/counter/request_count/5", "text/plain", nil)
+	if err != nil {
+		fmt.Printf("Error: %v\n", err)
+		return
+	}
+	defer resp.Body.Close()
 
 	// Получаем метрику через URL
-	resp, err := http.Get(server.URL + "/value/counter/request_count")
+	resp, err = http.Get(server.URL + "/value/counter/request_count")
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
 		return
@@ -198,11 +208,21 @@ func ExampleMetricsService_MetricsPageHandler() {
 	defer server.Close()
 
 	// Добавляем несколько метрик
-	http.Post(server.URL+"/update/gauge/memory/85.3", "text/plain", nil)
-	http.Post(server.URL+"/update/counter/requests/10", "text/plain", nil)
+	resp, err := http.Post(server.URL+"/update/gauge/memory/85.3", "text/plain", nil)
+	if err != nil {
+		fmt.Printf("Error: %v\n", err)
+		return
+	}
+	defer resp.Body.Close()
+	resp, err = http.Post(server.URL+"/update/counter/requests/10", "text/plain", nil)
+	if err != nil {
+		fmt.Printf("Error: %v\n", err)
+		return
+	}
+	defer resp.Body.Close()
 
 	// Получаем HTML страницу
-	resp, err := http.Get(server.URL + "/")
+	resp, err = http.Get(server.URL + "/")
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
 		return
