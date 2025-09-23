@@ -105,8 +105,11 @@ func GzipMiddleware(log *zap.Logger) func(next http.Handler) http.Handler {
 				if bw.statusCode != 0 {
 					w.WriteHeader(bw.statusCode)
 				}
-				gz := gzip.NewWriter(w)
+				gz := gzipWriterPool.Get().(*gzip.Writer)
+				gz.Reset(w)
+				defer gzipWriterPool.Put(gz)
 				defer gz.Close()
+
 				gz.Write(bw.bodyBuf)
 			} else {
 				if bw.statusCode != 0 {
