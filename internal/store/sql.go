@@ -178,7 +178,7 @@ func (s *DatabaseStorage) GetAllMetrics(ctx context.Context) ([]*models.Metrics,
 
 	for rows.Next() {
 		var m models.Metrics
-		err := rows.Scan(&m.ID, &m.MType, &m.Delta, &m.Value, &m.Hash)
+		err = rows.Scan(&m.ID, &m.MType, &m.Delta, &m.Value, &m.Hash)
 		if err != nil {
 			return nil, err
 		}

@@ -8,7 +8,7 @@ import (
 	"github.com/caarlos0/env/v6"
 )
 
-// Package config предоставляет конфигурацию для агента метрик.
+// Config предоставляет конфигурацию для агента метрик.
 // Поддерживает настройку через флаги командной строки и переменные окружения.
 type Config struct {
 	ServerHost            string `env:"ADDRESS"`         // адрес сервера
