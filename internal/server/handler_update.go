@@ -3,7 +3,6 @@ package server
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"net/http"
 	"strconv"
 
@@ -14,6 +13,8 @@ import (
 	"go.uber.org/zap"
 )
 
+// UpdatesHandler обрабатывает пакетное обновление метрик через JSON.
+// Требует подписи запроса. Принимает массив метрик в теле запроса.
 func (s *MetricsService) UpdatesHandler(res http.ResponseWriter, req *http.Request) {
 	ctx := req.Context()
 	logger := logger.LoggerFromCtx(ctx, s.Logger)
@@ -45,6 +46,8 @@ func (s *MetricsService) UpdatesHandler(res http.ResponseWriter, req *http.Reque
 
 }
 
+// UpdateHandler обрабатывает обновление одной метрики через JSON.
+// Принимает метрику в теле запроса и возвращает обновленную метрику.
 func (s *MetricsService) UpdateHandler(res http.ResponseWriter, req *http.Request) {
 	ctx := req.Context()
 	logger := logger.LoggerFromCtx(ctx, s.Logger)
@@ -91,6 +94,8 @@ func (s *MetricsService) UpdateHandler(res http.ResponseWriter, req *http.Reques
 	res.Write(retBody)
 }
 
+// UpdateViaURLHandler обрабатывает обновление метрики через URL параметры.
+// Формат: POST /update/{type}/{name}/{value}
 func (s *MetricsService) UpdateViaURLHandler(res http.ResponseWriter, req *http.Request) {
 	ctx := req.Context()
 	logger := logger.LoggerFromCtx(ctx, s.Logger)
@@ -115,6 +120,7 @@ func (s *MetricsService) UpdateViaURLHandler(res http.ResponseWriter, req *http.
 	res.WriteHeader(http.StatusOK)
 }
 
+// parseMetricURL извлекает метрику из URL параметров
 func parseMetricURL(req *http.Request) models.Metrics {
 	metric := models.Metrics{
 		MType: chi.URLParam(req, "type"),
@@ -133,6 +139,5 @@ func parseMetricURL(req *http.Request) models.Metrics {
 		}
 	}
 
-	fmt.Printf("[parseMetricURL] Parsed metric: %s\n", metric.String())
 	return metric
 }

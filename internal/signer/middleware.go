@@ -10,20 +10,25 @@ import (
 	"go.uber.org/zap"
 )
 
+// SignedResponseWriter буферизует ответ для добавления подписи
 type SignedResponseWriter struct {
 	http.ResponseWriter
 	bodyBuffer *bytes.Buffer
 	statusCode int
 }
 
+// Write буферизует тело ответа
 func (r *SignedResponseWriter) Write(b []byte) (int, error) {
 	return r.bodyBuffer.Write(b)
 }
 
+// WriteHeader сохраняет статус код для последующей установки
 func (r *SignedResponseWriter) WriteHeader(statusCode int) {
 	r.statusCode = statusCode
 }
 
+// SignResponseMiddleware создает middleware для подписи исходящих ответов.
+// Добавляет HMAC-SHA256 подпись в заголовок HashSHA256.
 func SignResponseMiddleware(key []byte, fallbackLogger *zap.Logger) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -51,6 +56,8 @@ func SignResponseMiddleware(key []byte, fallbackLogger *zap.Logger) func(next ht
 	}
 }
 
+// VerifySignatureMiddleware создает middleware для проверки входящих запросов.
+// Проверяет HMAC-SHA256 подпись в заголовке HashSHA256.
 func VerifySignatureMiddleware(key []byte, fallbackLogger *zap.Logger) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

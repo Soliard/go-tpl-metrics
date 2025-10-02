@@ -11,11 +11,15 @@ import (
 	"github.com/Soliard/go-tpl-metrics/models"
 )
 
+// fileStorage реализует Storage интерфейс для хранения метрик в файле.
+// Использует memStorage для работы в памяти и периодически сохраняет данные в файл.
 type fileStorage struct {
 	memory   *memStorage
 	filePath string
 }
 
+// NewFileStorage создает новое файловое хранилище.
+// Если isRestore=true, пытается восстановить данные из существующего файла.
 func NewFileStorage(filePath string, isRestore bool) (Storage, error) {
 	metrics := map[string]*models.Metrics{}
 	if isRestore {
@@ -32,6 +36,7 @@ func NewFileStorage(filePath string, isRestore bool) (Storage, error) {
 	}, nil
 }
 
+// UpdateMetrics обновляет метрики в памяти и сохраняет в файл
 func (s *fileStorage) UpdateMetrics(ctx context.Context, metrics []*models.Metrics) error {
 	err := s.memory.UpdateMetrics(ctx, metrics)
 	if err != nil {
@@ -44,6 +49,7 @@ func (s *fileStorage) UpdateMetrics(ctx context.Context, metrics []*models.Metri
 	return nil
 }
 
+// UpdateMetric обновляет одну метрику в памяти и сохраняет в файл
 func (s *fileStorage) UpdateMetric(ctx context.Context, metric *models.Metrics) (*models.Metrics, error) {
 	m, err := s.memory.UpdateMetric(ctx, metric)
 	if err != nil {
@@ -56,14 +62,17 @@ func (s *fileStorage) UpdateMetric(ctx context.Context, metric *models.Metrics) 
 	return m, nil
 }
 
+// GetMetric получает метрику по имени из памяти
 func (s *fileStorage) GetMetric(ctx context.Context, name string) (*models.Metrics, error) {
 	return s.memory.GetMetric(ctx, name)
 }
 
+// GetAllMetrics возвращает все метрики из памяти
 func (s *fileStorage) GetAllMetrics(ctx context.Context) ([]*models.Metrics, error) {
 	return s.memory.GetAllMetrics(ctx)
 }
 
+// restoreFromFile восстанавливает метрики из JSON файла
 func restoreFromFile(filePath string) (map[string]*models.Metrics, error) {
 	// в любом случае создаем директории и файл
 	os.MkdirAll(filepath.Dir(filePath), 0755)
@@ -89,6 +98,7 @@ func restoreFromFile(filePath string) (map[string]*models.Metrics, error) {
 
 }
 
+// saveMemoryToFile сохраняет метрики из памяти в JSON файл
 func (s *fileStorage) saveMemoryToFile() error {
 	os.MkdirAll(filepath.Dir(s.filePath), 0755)
 	file, err := os.OpenFile(s.filePath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0666)

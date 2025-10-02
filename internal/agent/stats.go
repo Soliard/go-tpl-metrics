@@ -12,6 +12,8 @@ import (
 	"go.uber.org/zap"
 )
 
+// Collector собирает метрики Go runtime (память, GC, горутины и т.д.).
+// Запускается в отдельной горутине с заданным интервалом.
 func (a *Agent) Collector(id int, result chan<- []*models.Metrics) {
 	var m runtime.MemStats
 	polCount := 0
@@ -58,6 +60,8 @@ func (a *Agent) Collector(id int, result chan<- []*models.Metrics) {
 	}
 }
 
+// CollectorPS собирает системные метрики (память и CPU) через gopsutil.
+// Запускается в отдельной горутине с заданным интервалом.
 func (a *Agent) CollectorPS(id int, result chan<- []*models.Metrics) {
 	for {
 		time.Sleep(a.pollInterval)

@@ -7,16 +7,20 @@ import (
 	"github.com/Soliard/go-tpl-metrics/models"
 )
 
+// memStorage реализует Storage интерфейс для хранения метрик в памяти
 type memStorage struct {
 	metrics map[string]*models.Metrics
 }
 
+// NewMemoryStorage создает новое хранилище в памяти.
+// Данные хранятся в map[string]*models.Metrics и не сохраняются между перезапусками.
 func NewMemoryStorage() Storage {
 	return &memStorage{
 		metrics: map[string]*models.Metrics{},
 	}
 }
 
+// UpdateMetrics обновляет несколько метрик в памяти
 func (s *memStorage) UpdateMetrics(ctx context.Context, metrics []*models.Metrics) error {
 	for _, m := range metrics {
 		_, err := s.UpdateMetric(ctx, m)
@@ -27,6 +31,8 @@ func (s *memStorage) UpdateMetrics(ctx context.Context, metrics []*models.Metric
 	return nil
 }
 
+// UpdateMetric обновляет или создает одну метрику в памяти.
+// Для counter метрик значения суммируются, для gauge - перезаписываются.
 func (s *memStorage) UpdateMetric(ctx context.Context, metric *models.Metrics) (*models.Metrics, error) {
 	existed, err := s.GetMetric(ctx, metric.ID)
 	if err != nil {
@@ -61,6 +67,7 @@ func (s *memStorage) UpdateMetric(ctx context.Context, metric *models.Metrics) (
 
 }
 
+// GetMetric получает метрику по имени из памяти
 func (s *memStorage) GetMetric(ctx context.Context, name string) (*models.Metrics, error) {
 	if metric, ok := s.metrics[name]; ok {
 		return metric, nil
@@ -68,6 +75,7 @@ func (s *memStorage) GetMetric(ctx context.Context, name string) (*models.Metric
 	return nil, ErrNotFound
 }
 
+// GetAllMetrics возвращает все метрики из памяти
 func (s *memStorage) GetAllMetrics(ctx context.Context) ([]*models.Metrics, error) {
 	metrics := make([]*models.Metrics, len(s.metrics))
 	idx := 0

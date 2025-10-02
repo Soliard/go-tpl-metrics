@@ -2,6 +2,7 @@ package server
 
 import (
 	"net/http"
+	_ "net/http/pprof"
 
 	"github.com/Soliard/go-tpl-metrics/internal/compressor"
 	"github.com/Soliard/go-tpl-metrics/internal/logger"
@@ -9,6 +10,9 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
+// MetricRouter создает и настраивает HTTP роутер для API метрик.
+// Включает маршруты для обновления, получения и отображения метрик.
+// Поддерживает два типа эндпоинтов: с подписью и без подписи.
 func MetricRouter(s *MetricsService) chi.Router {
 	r := chi.NewRouter()
 	r.Use(logger.LoggingMiddleware(s.Logger))
@@ -41,6 +45,8 @@ func MetricRouter(s *MetricsService) chi.Router {
 			r.Post("/", s.UpdatesHandler)
 		})
 	})
+
+	r.Mount("/debug/pprof", http.DefaultServeMux)
 
 	return r
 }

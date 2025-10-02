@@ -16,6 +16,8 @@ import (
 	"golang.org/x/sync/semaphore"
 )
 
+// Run запускает агент для сбора и отправки метрик.
+// Создает горутины для сбора метрик и отправки данных с ограничением скорости.
 func (a *Agent) Run(ctx context.Context) {
 
 	jobs := make(chan []*models.Metrics, 10)
@@ -36,6 +38,8 @@ func (a *Agent) Run(ctx context.Context) {
 	<-ctx.Done()
 }
 
+// Sender отправляет метрики на сервер с ограничением скорости.
+// Использует семафор для контроля количества одновременных запросов.
 func (a *Agent) Sender(ctx context.Context, id int, jobs <-chan []*models.Metrics, sem *semaphore.Weighted) {
 	for {
 		select {
