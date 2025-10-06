@@ -1,5 +1,7 @@
+// Package templates содержит шаблон для вывода html документа клиенту
 package templates
 
+// MetricsTemplate это верстка страницы для GET запроса с полным перечнем метрик
 const MetricsTemplate = `
 <!DOCTYPE html>
 <html>
