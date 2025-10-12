@@ -17,6 +17,7 @@ type Config struct {
 	LogLevel              string `env:"LOG_LEVEL"`       // уровень логирования
 	SignKey               string `env:"KEY"`             // ключ для подписи данных
 	RequestsLimit         int    `env:"RATE_LIMIT"`      // лимит одновременных запросов
+	CryptoKey             string `env:"CRYPTO_KEY"`      // путь к публичному ключу для шифрования
 }
 
 // New создает новую конфигурацию агента.
@@ -30,6 +31,7 @@ func New() (*Config, error) {
 	flag.StringVar(&config.LogLevel, "ll", "warn", "log level")
 	flag.StringVar(&config.SignKey, "k", "", "key will be used for signing data from agent")
 	flag.IntVar(&config.RequestsLimit, "l", 100, "server request rate limit")
+	flag.StringVar(&config.CryptoKey, "crypto-key", ``, "path to public PEM key for encryption")
 	flag.Parse()
 
 	err := env.Parse(config)

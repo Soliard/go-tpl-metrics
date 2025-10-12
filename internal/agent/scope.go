@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/Soliard/go-tpl-metrics/internal/compressor"
+	"github.com/Soliard/go-tpl-metrics/internal/crypto"
 	"github.com/Soliard/go-tpl-metrics/internal/signer"
 	"github.com/Soliard/go-tpl-metrics/models"
 	"go.uber.org/zap"
@@ -71,6 +72,17 @@ func (a *Agent) reportMetricsBatch(metrics []*models.Metrics) error {
 	if err != nil {
 		return fmt.Errorf("cant marshal metrics: %v", err)
 	}
+
+	// Шифруем данные, если публичный ключ настроен
+	if a.hasCryptoKey() {
+		encryptedBody, err := crypto.EncryptHybrid(body, a.publicKey)
+		if err != nil {
+			return fmt.Errorf("cant encrypt data: %v", err)
+		}
+		body = encryptedBody
+		a.Logger.Info("metrics encrypted successfully")
+	}
+
 	compBody, err := compressor.CompressData(body)
 	if err != nil {
 		return fmt.Errorf("cant compress data: %v", err)
@@ -117,6 +129,17 @@ func (a *Agent) sendMetricJSON(metric *models.Metrics) error {
 	if err != nil {
 		return fmt.Errorf("cant marshal metric: %v", err)
 	}
+
+	// Шифруем данные, если публичный ключ настроен
+	if a.hasCryptoKey() {
+		encryptedBuf, err := crypto.EncryptHybrid(buf, a.publicKey)
+		if err != nil {
+			return fmt.Errorf("cant encrypt data: %v", err)
+		}
+		buf = encryptedBuf
+		a.Logger.Info("metric encrypted successfully")
+	}
+
 	compressed, err := compressor.CompressData(buf)
 	if err != nil {
 		return fmt.Errorf("cant compress data: %v", err)

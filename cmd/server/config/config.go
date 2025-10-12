@@ -17,6 +17,7 @@ type Config struct {
 	IsRestoreFromFile    bool   `env:"RESTORE"`           // восстанавливать из файла при запуске
 	DatabaseDSN          string `env:"DATABASE_DSN"`      // строка подключения к БД
 	SignKey              string `env:"KEY"`               // ключ для подписи данных
+	CryptoKey            string `env:"CRYPTO_KEY"`        // путь к приватному ключу для расшифровки
 }
 
 // New создает новую конфигурацию сервера.
@@ -30,8 +31,9 @@ func New() (*Config, error) {
 	flag.StringVar(&config.FileStoragePath, "f", "", "file storage name")               //FileStorage\\default.txt
 	flag.BoolVar(&config.IsRestoreFromFile, "r", false, "is need to restore data from existed f file")
 	//postgres://postgres:postgres@localhost:5432/gotplmetrics?sslmode=disable
-	flag.StringVar(&config.DatabaseDSN, "d", "postgres://postgres:postgres@localhost:5432/gotplmetrics?sslmode=disable", "database connection string")
+	flag.StringVar(&config.DatabaseDSN, "d", "", "database connection string")
 	flag.StringVar(&config.SignKey, "k", "", "key will be used for signing and verifying data")
+	flag.StringVar(&config.CryptoKey, "crypto-key", ``, "path to private PEM key for decryption")
 	flag.Parse()
 
 	err := env.Parse(config)
