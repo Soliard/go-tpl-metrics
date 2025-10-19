@@ -8,8 +8,8 @@ import (
 	"log"
 	"os"
 
-	"github.com/Soliard/go-tpl-metrics/cmd/agent/config"
 	"github.com/Soliard/go-tpl-metrics/internal/agent"
+	"github.com/Soliard/go-tpl-metrics/internal/config"
 	"github.com/Soliard/go-tpl-metrics/internal/logger"
 	"go.uber.org/zap"
 )
@@ -29,7 +29,7 @@ func main() {
 	printBuildInfo()
 
 	defer os.Stdout.Sync()
-	config, err := config.New()
+	config, err := config.NewAgentConfig()
 	if err != nil {
 		log.Fatalf("cannot create config for agent %v", err)
 	}
@@ -39,7 +39,7 @@ func main() {
 		log.Fatalf("failed to initialize logger: %v", err)
 	}
 	defer logger.Sync()
-	logger.Info("agent config: ", zap.Any("config", config))
+	fmt.Printf("agent config: %v", config)
 
 	agent := agent.New(config, logger)
 	logger.Info("agent works with service on", zap.String("serverhost", config.ServerHost))

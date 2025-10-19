@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Soliard/go-tpl-metrics/cmd/agent/config"
 	"github.com/Soliard/go-tpl-metrics/internal/agent"
+	"github.com/Soliard/go-tpl-metrics/internal/config"
 	"github.com/Soliard/go-tpl-metrics/models"
 	"go.uber.org/zap"
 )
@@ -14,7 +14,7 @@ import (
 // ExampleAgent_Run демонстрирует запуск агента (с ограниченным временем)
 func ExampleAgent_Run() {
 	// Создаем конфигурацию
-	cfg := &config.Config{
+	cfg := &config.AgentConfig{
 		ServerHost:            "localhost:8080",
 		PollIntervalSeconds:   1,
 		ReportIntervalSeconds: 2,
@@ -43,7 +43,7 @@ func ExampleAgent_Run() {
 // ExampleAgent_Collector демонстрирует работу сборщика метрик
 func ExampleAgent_Collector() {
 	// Создаем конфигурацию
-	cfg := &config.Config{
+	cfg := &config.AgentConfig{
 		PollIntervalSeconds: 1,
 		LogLevel:            "warn",
 	}
@@ -83,7 +83,7 @@ func ExampleAgent_Collector() {
 // ExampleAgent_CollectorPS демонстрирует работу сборщика системных метрик
 func ExampleAgent_CollectorPS() {
 	// Создаем конфигурацию
-	cfg := &config.Config{
+	cfg := &config.AgentConfig{
 		PollIntervalSeconds: 1,
 		LogLevel:            "warn",
 	}

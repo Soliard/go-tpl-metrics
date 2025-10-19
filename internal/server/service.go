@@ -10,7 +10,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/Soliard/go-tpl-metrics/cmd/server/config"
+	"github.com/Soliard/go-tpl-metrics/internal/config"
 	"github.com/Soliard/go-tpl-metrics/internal/crypto"
 	"github.com/Soliard/go-tpl-metrics/internal/store"
 	"github.com/Soliard/go-tpl-metrics/models"
@@ -33,7 +33,7 @@ var maxRetries = 3
 
 // NewMetricsService создает новый экземпляр сервиса метрик.
 // Инициализирует хранилище, логгер и ключ для подписи данных.
-func NewMetricsService(storage store.Storage, config *config.Config, logger *zap.Logger) *MetricsService {
+func NewMetricsService(storage store.Storage, config *config.ServerConfig, logger *zap.Logger) *MetricsService {
 	var privateKey *rsa.PrivateKey
 	if config.CryptoKey != "" {
 		var err error

@@ -1,0 +1,8 @@
+{
+    "address": "localhost:8080", 
+    "restore": false, 
+    "store_interval": "5s",
+    "store_file": "", 
+    "database_dsn": "postgres://postgres:postgres@localhost:5432/gotplmetrics?sslmode=disable",
+    "crypto_key": "C:/Users/solia/Desktop/repo/go-tpl-metrics/cmd/server/config/private_key.pem" 
+} 

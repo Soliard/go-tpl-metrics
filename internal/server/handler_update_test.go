@@ -8,8 +8,8 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/Soliard/go-tpl-metrics/cmd/server/config"
 	"github.com/Soliard/go-tpl-metrics/internal/compressor"
+	"github.com/Soliard/go-tpl-metrics/internal/config"
 	"github.com/Soliard/go-tpl-metrics/internal/logger"
 	"github.com/Soliard/go-tpl-metrics/internal/store"
 	"github.com/Soliard/go-tpl-metrics/models"
@@ -20,7 +20,7 @@ import (
 
 func setupTestServer(t *testing.T) (*httptest.Server, *MetricsService) {
 	storage := store.NewMemoryStorage()
-	config := config.Config{ServerHost: "localhost:8080"}
+	config := config.ServerConfig{ServerHost: "localhost:8080"}
 	logger, err := logger.New("info")
 	require.NoError(t, err)
 	service := NewMetricsService(storage, &config, logger)

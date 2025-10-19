@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Soliard/go-tpl-metrics/cmd/agent/config"
+	"github.com/Soliard/go-tpl-metrics/internal/config"
 	"github.com/Soliard/go-tpl-metrics/internal/crypto"
 	"github.com/Soliard/go-tpl-metrics/internal/signer"
 	"github.com/go-resty/resty/v2"
@@ -29,7 +29,7 @@ type Agent struct {
 
 // New создает новый экземпляр агента с указанной конфигурацией.
 // Настраивает HTTP клиент с повторными попытками и нормализует URL сервера.
-func New(config *config.Config, logger *zap.Logger) *Agent {
+func New(config *config.AgentConfig, logger *zap.Logger) *Agent {
 	client := resty.New().
 		SetRetryCount(3).
 		SetRetryMaxWaitTime(2)

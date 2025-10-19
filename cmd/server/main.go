@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/Soliard/go-tpl-metrics/cmd/server/config"
+	"github.com/Soliard/go-tpl-metrics/internal/config"
 	"github.com/Soliard/go-tpl-metrics/internal/logger"
 	"github.com/Soliard/go-tpl-metrics/internal/server"
 	"github.com/Soliard/go-tpl-metrics/internal/store"
@@ -32,7 +32,7 @@ func main() {
 
 	log.Print("server starting...")
 	defer os.Stdout.Sync()
-	config, err := config.New()
+	config, err := config.NewServerConfig()
 	if err != nil {
 		log.Fatalf("FATAL: cannot create config: %v", err)
 	}
@@ -42,7 +42,7 @@ func main() {
 		log.Fatalf("failed to initialize logger: %v", err)
 	}
 	defer logger.Sync()
-	logger.Warn("server config: ", zap.Any("config", config))
+	fmt.Printf("server config: %v", config)
 
 	storage, err := store.New(context.TODO(), config)
 	if err != nil {
