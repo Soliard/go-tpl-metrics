@@ -48,6 +48,8 @@ func ExampleAgent_Collector() {
 		LogLevel:            "warn",
 	}
 
+	ctx := context.Background()
+
 	// Создаем логгер
 	logger, _ := zap.NewDevelopment()
 
@@ -61,7 +63,7 @@ func ExampleAgent_Collector() {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 
-	go agent.Collector(1, metricsChan)
+	go agent.Collector(ctx, 1, metricsChan)
 
 	// Получаем метрики
 	select {
@@ -101,7 +103,7 @@ func ExampleAgent_CollectorPS() {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	go agent.CollectorPS(1, metricsChan)
+	go agent.CollectorPS(ctx, 1, metricsChan)
 
 	// Получаем метрики
 	select {

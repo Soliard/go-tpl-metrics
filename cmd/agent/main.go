@@ -7,11 +7,12 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/Soliard/go-tpl-metrics/internal/agent"
 	"github.com/Soliard/go-tpl-metrics/internal/config"
 	"github.com/Soliard/go-tpl-metrics/internal/logger"
-	"go.uber.org/zap"
 )
 
 // Глобальные переменные для информации о сборке
@@ -25,7 +26,6 @@ var (
 // main инициализирует и запускает агент для сбора метрик.
 // Создает конфигурацию, логгер и запускает сбор метрик в фоновом режиме.
 func main() {
-
 	printBuildInfo()
 
 	defer os.Stdout.Sync()
@@ -41,10 +41,22 @@ func main() {
 	defer logger.Sync()
 	fmt.Printf("agent config: %v", config)
 
-	agent := agent.New(config, logger)
-	logger.Info("agent works with service on", zap.String("serverhost", config.ServerHost))
-	ctx := context.Background()
-	agent.Run(ctx)
+	a := agent.New(config, logger)
+	fmt.Printf("agent works with service on %s", config.ServerHost)
+
+	// Контекст и обработка сигналов
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
+	go func() {
+		<-sigCh
+		fmt.Print("shutdown signal received, stopping agent...")
+		cancel()
+	}()
+
+	a.Run(ctx)
 }
 
 func printBuildInfo() {

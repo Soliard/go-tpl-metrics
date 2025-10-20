@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"sync"
 	"time"
 
 	"github.com/Soliard/go-tpl-metrics/internal/compressor"
@@ -20,23 +21,43 @@ import (
 // Run запускает агент для сбора и отправки метрик.
 // Создает горутины для сбора метрик и отправки данных с ограничением скорости.
 func (a *Agent) Run(ctx context.Context) {
-
 	jobs := make(chan []*models.Metrics, 10)
 	sem := semaphore.NewWeighted(int64(a.requestRateLimit))
 
+	var wg sync.WaitGroup
+
+	// collectors
 	for c := 1; c < 2; c++ {
-		go a.Collector(c, jobs)
+		wg.Add(1)
+		go func(id int) {
+			defer wg.Done()
+			a.Collector(ctx, id, jobs)
+		}(c)
 	}
 
 	for c := 1; c < 2; c++ {
-		go a.CollectorPS(c, jobs)
+		wg.Add(1)
+		go func(id int) {
+			defer wg.Done()
+			a.CollectorPS(ctx, id, jobs)
+		}(c)
 	}
 
+	// senders
 	for s := 1; s < 4; s++ {
-		go a.Sender(ctx, s, jobs, sem)
+		wg.Add(1)
+		go func(id int) {
+			defer wg.Done()
+			a.Sender(ctx, id, jobs, sem)
+		}(s)
 	}
 
+	// Ждем сигнал отмены
 	<-ctx.Done()
+	// Закрываем очередь заданий — отправители корректно дочитают
+	close(jobs)
+	// Дожидаемся завершения всех горутин
+	wg.Wait()
 }
 
 // Sender отправляет метрики на сервер с ограничением скорости.
@@ -44,19 +65,30 @@ func (a *Agent) Run(ctx context.Context) {
 func (a *Agent) Sender(ctx context.Context, id int, jobs <-chan []*models.Metrics, sem *semaphore.Weighted) {
 	for {
 		select {
-		case j := <-jobs:
-			time.Sleep(a.reportInterval)
+		case <-ctx.Done():
+			return
+		case j, ok := <-jobs:
+			if !ok {
+				return
+			}
+
+			// Ждём reportInterval, прерываемся если ctx done.
+			select {
+			case <-ctx.Done():
+				return
+			case <-time.After(a.reportInterval):
+			}
+
 			if err := sem.Acquire(ctx, 1); err != nil {
 				a.Logger.Error("failed to acquire semaphore", zap.Error(err))
 				continue
 			}
+
 			err := a.reportMetricsBatch(j)
 			sem.Release(1)
 			if err != nil {
 				a.Logger.Error("error while sending metrics", zap.Error(err))
 			}
-		case <-ctx.Done():
-			return
 		}
 	}
 }

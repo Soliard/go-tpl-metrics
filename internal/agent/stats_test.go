@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"context"
 	"testing"
 
 	"github.com/Soliard/go-tpl-metrics/internal/config"
@@ -12,7 +13,8 @@ func TestCollector(t *testing.T) {
 	cfg := config.AgentConfig{}
 	agent := New(&cfg, zap.NewNop())
 	jobs := make(chan []*models.Metrics)
-	go agent.Collector(1, jobs)
+	ctx := context.Background()
+	go agent.Collector(ctx, 1, jobs)
 
 	metrics := <-jobs
 
