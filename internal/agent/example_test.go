@@ -48,8 +48,6 @@ func ExampleAgent_Collector() {
 		LogLevel:            "warn",
 	}
 
-	ctx := context.Background()
-
 	// Создаем логгер
 	logger, _ := zap.NewDevelopment()
 
