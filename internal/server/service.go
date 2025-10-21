@@ -5,11 +5,13 @@ package server
 
 import (
 	"context"
+	"crypto/rsa"
 	"errors"
 	"os"
 	"time"
 
-	"github.com/Soliard/go-tpl-metrics/cmd/server/config"
+	"github.com/Soliard/go-tpl-metrics/internal/config"
+	"github.com/Soliard/go-tpl-metrics/internal/crypto"
 	"github.com/Soliard/go-tpl-metrics/internal/store"
 	"github.com/Soliard/go-tpl-metrics/models"
 	"github.com/jackc/pgerrcode"
@@ -24,18 +26,28 @@ type MetricsService struct {
 	storage    store.Storage
 	Logger     *zap.Logger
 	signKey    []byte
+	privateKey *rsa.PrivateKey // Новое поле
 }
 
 var maxRetries = 3
 
 // NewMetricsService создает новый экземпляр сервиса метрик.
 // Инициализирует хранилище, логгер и ключ для подписи данных.
-func NewMetricsService(storage store.Storage, config *config.Config, logger *zap.Logger) *MetricsService {
+func NewMetricsService(storage store.Storage, config *config.ServerConfig, logger *zap.Logger) *MetricsService {
+	var privateKey *rsa.PrivateKey
+	if config.CryptoKey != "" {
+		var err error
+		privateKey, err = crypto.LoadPrivateKey(config.CryptoKey)
+		if err != nil {
+			logger.Fatal("failed to load private key", zap.Error(err))
+		}
+	}
 	return &MetricsService{
 		storage:    storage,
 		ServerHost: config.ServerHost,
 		Logger:     logger,
 		signKey:    []byte(config.SignKey),
+		privateKey: privateKey,
 	}
 }
 

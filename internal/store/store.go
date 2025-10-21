@@ -7,7 +7,7 @@ import (
 	"context"
 	"errors"
 
-	"github.com/Soliard/go-tpl-metrics/cmd/server/config"
+	"github.com/Soliard/go-tpl-metrics/internal/config"
 	"github.com/Soliard/go-tpl-metrics/models"
 )
 
@@ -35,7 +35,7 @@ var ErrInvalidMetricReceived = errors.New("invalid metric recieved")
 // - FileStoragePath указан -> файловое хранилище
 // - DatabaseDSN указан -> хранилище в базе данных
 // - иначе -> хранилище в памяти
-func New(ctx context.Context, config *config.Config) (Storage, error) {
+func New(ctx context.Context, config *config.ServerConfig) (Storage, error) {
 	if config.FileStoragePath != "" {
 		return NewFileStorage(config.FileStoragePath, config.IsRestoreFromFile)
 	} else if config.DatabaseDSN != "" {

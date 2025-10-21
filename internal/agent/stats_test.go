@@ -1,18 +1,20 @@
 package agent
 
 import (
+	"context"
 	"testing"
 
-	"github.com/Soliard/go-tpl-metrics/cmd/agent/config"
+	"github.com/Soliard/go-tpl-metrics/internal/config"
 	"github.com/Soliard/go-tpl-metrics/models"
 	"go.uber.org/zap"
 )
 
 func TestCollector(t *testing.T) {
-	cfg := config.Config{}
+	cfg := config.AgentConfig{}
 	agent := New(&cfg, zap.NewNop())
 	jobs := make(chan []*models.Metrics)
-	go agent.Collector(1, jobs)
+	ctx := context.Background()
+	go agent.Collector(ctx, 1, jobs)
 
 	metrics := <-jobs
 
