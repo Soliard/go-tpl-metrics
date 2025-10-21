@@ -75,13 +75,13 @@ func main() {
 	<-sigCh
 	logger.Info("shutdown signal received, stopping server...")
 
-	appCancel()
-
 	shCtx, shCancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer shCancel()
 	if err := srv.Shutdown(shCtx); err != nil {
 		logger.Error("HTTP server Shutdown", zap.Error(err))
 	}
+
+	appCancel()
 
 	fmt.Println("server shutdown gracefully")
 }
