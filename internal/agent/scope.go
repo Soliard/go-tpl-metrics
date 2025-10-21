@@ -48,7 +48,7 @@ func (a *Agent) Run(ctx context.Context) {
 		wg.Add(1)
 		go func(id int) {
 			defer wg.Done()
-			a.Sender(ctx, id, jobs, sem)
+			a.StartSender(ctx, jobs, sem)
 		}(s)
 	}
 
@@ -60,34 +60,47 @@ func (a *Agent) Run(ctx context.Context) {
 	wg.Wait()
 }
 
-// Sender отправляет метрики на сервер с ограничением скорости.
+// StartSender отправляет метрики на сервер с ограничением скорости.
 // Использует семафор для контроля количества одновременных запросов.
-func (a *Agent) Sender(ctx context.Context, id int, jobs <-chan []*models.Metrics, sem *semaphore.Weighted) {
+func (a *Agent) StartSender(ctx context.Context, jobs <-chan []*models.Metrics, sem *semaphore.Weighted) {
+	ticker := time.NewTicker(a.reportInterval)
+	defer ticker.Stop()
+
 	for {
 		select {
 		case <-ctx.Done():
-			return
-		case j, ok := <-jobs:
-			if !ok {
-				return
+			for j := range jobs {
+				err := a.reportMetricsBatch(j)
+				if err != nil {
+					a.Logger.Error("failed to send metric while shutdown drainig", zap.Error(err))
+				}
 			}
+			return
 
-			// Ждём reportInterval, прерываемся если ctx done.
+		case <-ticker.C:
 			select {
 			case <-ctx.Done():
+				for j := range jobs {
+					err := a.reportMetricsBatch(j)
+					if err != nil {
+						a.Logger.Error("failed to send metric while shutdown drainig", zap.Error(err))
+					}
+				}
 				return
-			case <-time.After(a.reportInterval):
-			}
 
-			if err := sem.Acquire(ctx, 1); err != nil {
-				a.Logger.Error("failed to acquire semaphore", zap.Error(err))
-				continue
-			}
-
-			err := a.reportMetricsBatch(j)
-			sem.Release(1)
-			if err != nil {
-				a.Logger.Error("error while sending metrics", zap.Error(err))
+			case j, ok := <-jobs:
+				if !ok {
+					return
+				}
+				if err := sem.Acquire(ctx, 1); err != nil {
+					a.Logger.Error("failed to acquire semaphore", zap.Error(err))
+					continue
+				}
+				err := a.reportMetricsBatch(j)
+				sem.Release(1)
+				if err != nil {
+					a.Logger.Error("error while sending metrics", zap.Error(err))
+				}
 			}
 		}
 	}
