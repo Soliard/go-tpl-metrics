@@ -18,6 +18,7 @@ type ServerConfig struct {
 	DatabaseDSN          string `env:"DATABASE_DSN" json:"database_dsn"`     // строка подключения к БД
 	SignKey              string `env:"KEY" json:"sign_key"`                  // ключ для подписи данных
 	CryptoKey            string `env:"CRYPTO_KEY" json:"crypto_key"`         // путь к приватному ключу
+	TrustedSubnet        string `env:"TRUSTED_SUBNET" json:"trusted_subnet"` // доверенная подсеть (CIDR)
 }
 
 // ServerJSONConfig представляет структуру JSON конфигурации для сервера
@@ -28,6 +29,7 @@ type ServerJSONConfig struct {
 	StoreFile     string `json:"store_file"`     // аналог переменной окружения STORE_FILE или -f
 	DatabaseDSN   string `json:"database_dsn"`   // аналог переменной окружения DATABASE_DSN или флага -d
 	CryptoKey     string `json:"crypto_key"`     // аналог переменной окружения CRYPTO_KEY или флага -crypto-key
+	TrustedSubnet string `json:"trusted_subnet"` // аналог TRUSTED_SUBNET или флага -t
 }
 
 // NewServerConfig создает новую конфигурацию сервера.
@@ -69,6 +71,7 @@ func loadServerFromJSON(config *ServerConfig, reader *ConfigFileReader, filePath
 	config.FileStoragePath = jsonConfig.StoreFile
 	config.DatabaseDSN = jsonConfig.DatabaseDSN
 	config.CryptoKey = jsonConfig.CryptoKey
+	config.TrustedSubnet = jsonConfig.TrustedSubnet
 
 	// Парсим store_interval из строки в секунды
 	if jsonConfig.StoreInterval != "" {
@@ -94,6 +97,7 @@ func parseServerFlags(config *ServerConfig) error {
 	fs.StringVar(&config.DatabaseDSN, "d", config.DatabaseDSN, "database connection string")
 	fs.StringVar(&config.SignKey, "k", "", "key will be used for signing and verifying data")
 	fs.StringVar(&config.CryptoKey, "crypto-key", config.CryptoKey, "path to private PEM key for decryption")
+	fs.StringVar(&config.TrustedSubnet, "t", config.TrustedSubnet, "trusted subnet in CIDR (e.g. 192.168.1.0/24)")
 
 	err := fs.Parse(os.Args[1:])
 	return err
