@@ -27,6 +27,24 @@ type AgentJSONConfig struct {
 	CryptoKey      string `json:"crypto_key"`      // аналог переменной окружения CRYPTO_KEY или флага -crypto-key
 }
 
+func fillAgentDefaults(c *AgentConfig) {
+	if c.ServerHost == "" {
+		c.ServerHost = "localhost:8080"
+	}
+	if c.PollIntervalSeconds < 1 {
+		c.PollIntervalSeconds = 2
+	}
+	if c.ReportIntervalSeconds < 1 {
+		c.ReportIntervalSeconds = 10
+	}
+	if c.LogLevel == "" {
+		c.LogLevel = "warn"
+	}
+	if c.RequestsLimit == 0 {
+		c.RequestsLimit = 100
+	}
+}
+
 // NewAgentConfig создает новую конфигурацию агента.
 // Приоритет: переменные окружения > флаги командной строки > JSON файл > значения по умолчанию
 func NewAgentConfig() (*AgentConfig, error) {
@@ -49,6 +67,8 @@ func NewAgentConfig() (*AgentConfig, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	fillAgentDefaults(config)
 
 	return config, nil
 }
@@ -91,9 +111,9 @@ func parseAgentFlags(config *AgentConfig) error {
 	fs.StringVar(&config.ServerHost, "a", config.ServerHost, "server address")
 	fs.IntVar(&config.PollIntervalSeconds, "p", config.PollIntervalSeconds, "metrics poll interval in seconds")
 	fs.IntVar(&config.ReportIntervalSeconds, "r", config.ReportIntervalSeconds, "metrics send interval in seconds")
-	fs.StringVar(&config.LogLevel, "ll", "warn", "log level")
-	fs.StringVar(&config.SignKey, "k", "", "key will be used for signing data from agent")
-	fs.IntVar(&config.RequestsLimit, "l", 100, "server request rate limit")
+	fs.StringVar(&config.LogLevel, "ll", config.LogLevel, "log level")
+	fs.StringVar(&config.SignKey, "k", config.SignKey, "key will be used for signing data from agent")
+	fs.IntVar(&config.RequestsLimit, "l", config.RequestsLimit, "server request rate limit")
 	fs.StringVar(&config.CryptoKey, "crypto-key", config.CryptoKey, "path to public PEM key for encryption")
 
 	err := fs.Parse(os.Args[1:])

@@ -32,6 +32,18 @@ type ServerJSONConfig struct {
 	TrustedSubnet string `json:"trusted_subnet"` // аналог TRUSTED_SUBNET или флага -t
 }
 
+func fillServerDefaults(c *ServerConfig) {
+	if c.ServerHost == "" {
+		c.ServerHost = "localhost:8080"
+	}
+	if c.LogLevel == "" {
+		c.LogLevel = "warn"
+	}
+	if c.StoreIntervalSeconds == 0 {
+		c.StoreIntervalSeconds = 5
+	}
+}
+
 // NewServerConfig создает новую конфигурацию сервера.
 // Приоритет: переменные окружения > флаги командной строки > JSON файл > значения по умолчанию
 func NewServerConfig() (*ServerConfig, error) {
@@ -54,6 +66,8 @@ func NewServerConfig() (*ServerConfig, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	fillServerDefaults(config)
 
 	return config, nil
 }
@@ -90,12 +104,12 @@ func parseServerFlags(config *ServerConfig) error {
 	fs := flag.NewFlagSet("server", flag.ContinueOnError)
 
 	fs.StringVar(&config.ServerHost, "a", config.ServerHost, "server address")
-	fs.StringVar(&config.LogLevel, "l", "warn", "log level")
+	fs.StringVar(&config.LogLevel, "l", config.LogLevel, "log level")
 	fs.IntVar(&config.StoreIntervalSeconds, "i", config.StoreIntervalSeconds, "store data interval in seconds")
 	fs.StringVar(&config.FileStoragePath, "f", config.FileStoragePath, "file storage name")
 	fs.BoolVar(&config.IsRestoreFromFile, "r", config.IsRestoreFromFile, "is need to restore data from existed file")
 	fs.StringVar(&config.DatabaseDSN, "d", config.DatabaseDSN, "database connection string")
-	fs.StringVar(&config.SignKey, "k", "", "key will be used for signing and verifying data")
+	fs.StringVar(&config.SignKey, "k", config.SignKey, "key will be used for signing and verifying data")
 	fs.StringVar(&config.CryptoKey, "crypto-key", config.CryptoKey, "path to private PEM key for decryption")
 	fs.StringVar(&config.TrustedSubnet, "t", config.TrustedSubnet, "trusted subnet in CIDR (e.g. 192.168.1.0/24)")
 
