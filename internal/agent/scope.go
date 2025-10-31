@@ -136,6 +136,9 @@ func (a *Agent) reportMetricsBatch(metrics []*models.Metrics) error {
 	req.Header.Set("Content-Encoding", "gzip")
 	// resty позаботится о асептинге gzip и о расшифровке тела ответа из gzip
 	req.Header.Set("Accept", "application/json")
+	if a.agentIP != "" {
+		req.Header.Set("X-Real-IP", a.agentIP)
+	}
 
 	if a.hasSignKey() {
 		signature := signer.Sign(compBody, a.signKey)
@@ -193,6 +196,9 @@ func (a *Agent) sendMetricJSON(metric *models.Metrics) error {
 	req.Header.Set("Content-Encoding", "gzip")
 	// resty позаботится о асептинге gzip и о расшифровке тела ответа из gzip
 	req.Header.Set("Accept", "application/json")
+	if a.agentIP != "" {
+		req.Header.Set("X-Real-IP", a.agentIP)
+	}
 
 	if a.hasSignKey() {
 		signature := signer.Sign(compressed, a.signKey)
@@ -233,13 +239,17 @@ func (a *Agent) sendMetric(metric *models.Metrics) error {
 	} else {
 		value = metric.StringifyValue()
 	}
+
 	url, err := url.JoinPath(a.serverHostURL, "update", metric.MType, metric.ID, value)
 	if err != nil {
 		return err
 	}
+
 	res, err := a.httpClient.R().
 		SetHeader("Content-type", "text/plain").
+		SetHeader("X-Real-IP", a.agentIP).
 		Post(url)
+
 	if err != nil {
 		return fmt.Errorf(`error while send request with metric: %v`, err)
 	}

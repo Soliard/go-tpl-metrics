@@ -4,6 +4,7 @@ package agent
 
 import (
 	"crypto/rsa"
+	"net"
 	"strings"
 	"time"
 
@@ -25,6 +26,7 @@ type Agent struct {
 	signKey          []byte
 	requestRateLimit int
 	publicKey        *rsa.PublicKey
+	agentIP          string
 }
 
 // New создает новый экземпляр агента с указанной конфигурацией.
@@ -54,6 +56,7 @@ func New(config *config.AgentConfig, logger *zap.Logger) *Agent {
 		signKey:          []byte(config.SignKey),
 		requestRateLimit: config.RequestsLimit,
 		publicKey:        publicKey,
+		agentIP:          detectOutboundIP(),
 	}
 }
 
@@ -73,4 +76,20 @@ func (a *Agent) hasSignKey() bool {
 // hasCryptoKey проверяет, настроен ли ключ для шифрования данных
 func (a *Agent) hasCryptoKey() bool {
 	return a.publicKey != nil
+}
+
+// detectOutboundIP определяет исходящий IP-адрес
+// через UDP подключение к публичному серверу
+func detectOutboundIP() string {
+	conn, err := net.Dial("udp", "8.8.8.8:80")
+	if err != nil {
+		return ""
+	}
+	defer conn.Close()
+	localAddr := conn.LocalAddr()
+	udpAddr, ok := localAddr.(*net.UDPAddr)
+	if !ok || udpAddr.IP == nil {
+		return ""
+	}
+	return udpAddr.IP.String()
 }
