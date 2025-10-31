@@ -7,9 +7,11 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"sync"
 	"time"
 
 	"github.com/Soliard/go-tpl-metrics/internal/compressor"
+	"github.com/Soliard/go-tpl-metrics/internal/crypto"
 	"github.com/Soliard/go-tpl-metrics/internal/signer"
 	"github.com/Soliard/go-tpl-metrics/models"
 	"go.uber.org/zap"
@@ -19,43 +21,87 @@ import (
 // Run запускает агент для сбора и отправки метрик.
 // Создает горутины для сбора метрик и отправки данных с ограничением скорости.
 func (a *Agent) Run(ctx context.Context) {
-
 	jobs := make(chan []*models.Metrics, 10)
 	sem := semaphore.NewWeighted(int64(a.requestRateLimit))
 
+	var wg sync.WaitGroup
+
+	// collectors
 	for c := 1; c < 2; c++ {
-		go a.Collector(c, jobs)
+		wg.Add(1)
+		go func(id int) {
+			defer wg.Done()
+			a.Collector(ctx, id, jobs)
+		}(c)
 	}
 
 	for c := 1; c < 2; c++ {
-		go a.CollectorPS(c, jobs)
+		wg.Add(1)
+		go func(id int) {
+			defer wg.Done()
+			a.CollectorPS(ctx, id, jobs)
+		}(c)
 	}
 
+	// senders
 	for s := 1; s < 4; s++ {
-		go a.Sender(ctx, s, jobs, sem)
+		wg.Add(1)
+		go func(id int) {
+			defer wg.Done()
+			a.StartSender(ctx, jobs, sem)
+		}(s)
 	}
 
+	// Ждем сигнал отмены
 	<-ctx.Done()
+	// Закрываем очередь заданий — отправители корректно дочитают
+	close(jobs)
+	// Дожидаемся завершения всех горутин
+	wg.Wait()
 }
 
-// Sender отправляет метрики на сервер с ограничением скорости.
+// StartSender отправляет метрики на сервер с ограничением скорости.
 // Использует семафор для контроля количества одновременных запросов.
-func (a *Agent) Sender(ctx context.Context, id int, jobs <-chan []*models.Metrics, sem *semaphore.Weighted) {
+func (a *Agent) StartSender(ctx context.Context, jobs <-chan []*models.Metrics, sem *semaphore.Weighted) {
+	ticker := time.NewTicker(a.reportInterval)
+	defer ticker.Stop()
+
 	for {
 		select {
-		case j := <-jobs:
-			time.Sleep(a.reportInterval)
-			if err := sem.Acquire(ctx, 1); err != nil {
-				a.Logger.Error("failed to acquire semaphore", zap.Error(err))
-				continue
-			}
-			err := a.reportMetricsBatch(j)
-			sem.Release(1)
-			if err != nil {
-				a.Logger.Error("error while sending metrics", zap.Error(err))
-			}
 		case <-ctx.Done():
+			for j := range jobs {
+				err := a.reportMetricsBatch(j)
+				if err != nil {
+					a.Logger.Error("failed to send metric while shutdown drainig", zap.Error(err))
+				}
+			}
 			return
+
+		case <-ticker.C:
+			select {
+			case <-ctx.Done():
+				for j := range jobs {
+					err := a.reportMetricsBatch(j)
+					if err != nil {
+						a.Logger.Error("failed to send metric while shutdown drainig", zap.Error(err))
+					}
+				}
+				return
+
+			case j, ok := <-jobs:
+				if !ok {
+					return
+				}
+				if err := sem.Acquire(ctx, 1); err != nil {
+					a.Logger.Error("failed to acquire semaphore", zap.Error(err))
+					continue
+				}
+				err := a.reportMetricsBatch(j)
+				sem.Release(1)
+				if err != nil {
+					a.Logger.Error("error while sending metrics", zap.Error(err))
+				}
+			}
 		}
 	}
 }
@@ -71,6 +117,17 @@ func (a *Agent) reportMetricsBatch(metrics []*models.Metrics) error {
 	if err != nil {
 		return fmt.Errorf("cant marshal metrics: %v", err)
 	}
+
+	// Шифруем данные, если публичный ключ настроен
+	if a.hasCryptoKey() {
+		encryptedBody, err := crypto.EncryptHybrid(body, a.publicKey)
+		if err != nil {
+			return fmt.Errorf("cant encrypt data: %v", err)
+		}
+		body = encryptedBody
+		a.Logger.Info("metrics encrypted successfully")
+	}
+
 	compBody, err := compressor.CompressData(body)
 	if err != nil {
 		return fmt.Errorf("cant compress data: %v", err)
@@ -117,6 +174,17 @@ func (a *Agent) sendMetricJSON(metric *models.Metrics) error {
 	if err != nil {
 		return fmt.Errorf("cant marshal metric: %v", err)
 	}
+
+	// Шифруем данные, если публичный ключ настроен
+	if a.hasCryptoKey() {
+		encryptedBuf, err := crypto.EncryptHybrid(buf, a.publicKey)
+		if err != nil {
+			return fmt.Errorf("cant encrypt data: %v", err)
+		}
+		buf = encryptedBuf
+		a.Logger.Info("metric encrypted successfully")
+	}
+
 	compressed, err := compressor.CompressData(buf)
 	if err != nil {
 		return fmt.Errorf("cant compress data: %v", err)

@@ -1,0 +1,6 @@
+{
+    "address": "localhost:8080", 
+    "report_interval": "5s", 
+    "poll_interval": "1s", 
+    "crypto_key": "C:/Users/solia/Desktop/repo/go-tpl-metrics/cmd/agent/config/public_key.pem" 
+}

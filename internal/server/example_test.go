@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 
-	"github.com/Soliard/go-tpl-metrics/cmd/server/config"
+	"github.com/Soliard/go-tpl-metrics/internal/config"
 	"github.com/Soliard/go-tpl-metrics/internal/server"
 	"github.com/Soliard/go-tpl-metrics/internal/store"
 	"github.com/Soliard/go-tpl-metrics/models"
@@ -20,7 +20,7 @@ func ExampleMetricsService_UpdateHandler() {
 	// Создаем тестовый сервер
 	storage := store.NewMemoryStorage()
 	logger, _ := zap.NewDevelopment()
-	service := server.NewMetricsService(storage, &config.Config{}, logger)
+	service := server.NewMetricsService(storage, &config.ServerConfig{}, logger)
 	router := server.MetricRouter(service)
 	server := httptest.NewServer(router)
 	defer server.Close()
@@ -52,7 +52,7 @@ func ExampleMetricsService_UpdateViaURLHandler() {
 	// Создаем тестовый сервер
 	storage := store.NewMemoryStorage()
 	logger, _ := zap.NewDevelopment()
-	service := server.NewMetricsService(storage, &config.Config{}, logger)
+	service := server.NewMetricsService(storage, &config.ServerConfig{}, logger)
 	router := server.MetricRouter(service)
 	server := httptest.NewServer(router)
 	defer server.Close()
@@ -74,7 +74,7 @@ func ExampleMetricsService_ValueHandler() {
 	// Создаем тестовый сервер
 	storage := store.NewMemoryStorage()
 	logger, _ := zap.NewDevelopment()
-	service := server.NewMetricsService(storage, &config.Config{}, logger)
+	service := server.NewMetricsService(storage, &config.ServerConfig{}, logger)
 	router := server.MetricRouter(service)
 	server := httptest.NewServer(router)
 	defer server.Close()
@@ -114,7 +114,7 @@ func ExampleMetricsService_ValueViaURLHandler() {
 	// Создаем тестовый сервер
 	storage := store.NewMemoryStorage()
 	logger, _ := zap.NewDevelopment()
-	service := server.NewMetricsService(storage, &config.Config{}, logger)
+	service := server.NewMetricsService(storage, &config.ServerConfig{}, logger)
 	router := server.MetricRouter(service)
 	server := httptest.NewServer(router)
 	defer server.Close()
@@ -148,7 +148,7 @@ func ExampleMetricsService_UpdatesHandler() {
 	// Создаем тестовый сервер
 	storage := store.NewMemoryStorage()
 	logger, _ := zap.NewDevelopment()
-	service := server.NewMetricsService(storage, &config.Config{}, logger)
+	service := server.NewMetricsService(storage, &config.ServerConfig{}, logger)
 	router := server.MetricRouter(service)
 	server := httptest.NewServer(router)
 	defer server.Close()
@@ -180,7 +180,7 @@ func ExampleMetricsService_PingHandler() {
 	// Создаем тестовый сервер
 	storage := store.NewMemoryStorage()
 	logger, _ := zap.NewDevelopment()
-	service := server.NewMetricsService(storage, &config.Config{}, logger)
+	service := server.NewMetricsService(storage, &config.ServerConfig{}, logger)
 	router := server.MetricRouter(service)
 	server := httptest.NewServer(router)
 	defer server.Close()
@@ -202,7 +202,7 @@ func ExampleMetricsService_MetricsPageHandler() {
 	// Создаем тестовый сервер
 	storage := store.NewMemoryStorage()
 	logger, _ := zap.NewDevelopment()
-	service := server.NewMetricsService(storage, &config.Config{}, logger)
+	service := server.NewMetricsService(storage, &config.ServerConfig{}, logger)
 	router := server.MetricRouter(service)
 	server := httptest.NewServer(router)
 	defer server.Close()

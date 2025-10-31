@@ -7,7 +7,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/Soliard/go-tpl-metrics/cmd/agent/config"
+	"github.com/Soliard/go-tpl-metrics/internal/config"
 	"github.com/Soliard/go-tpl-metrics/internal/logger"
 	"github.com/Soliard/go-tpl-metrics/models"
 	"github.com/stretchr/testify/assert"
@@ -17,7 +17,7 @@ func setupTestAgent(serverHost string) *Agent {
 	if serverHost == "" {
 		serverHost = "http://localhost:8080"
 	}
-	config := config.Config{
+	config := config.AgentConfig{
 		ServerHost:            serverHost,
 		PollIntervalSeconds:   2,
 		ReportIntervalSeconds: 10,
