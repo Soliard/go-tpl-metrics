@@ -3,8 +3,9 @@
 package agent
 
 import (
-    "context"
+	"context"
 	"crypto/rsa"
+	"fmt"
 	"net"
 	"strings"
 	"time"
@@ -14,15 +15,15 @@ import (
 	"github.com/Soliard/go-tpl-metrics/internal/signer"
 	"github.com/go-resty/resty/v2"
 	"go.uber.org/zap"
-    "google.golang.org/grpc"
-    "google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 // Agent представляет клиент для сбора и отправки метрик.
 // Собирает метрики с заданными интервалами и отправляет их на сервер.
 type Agent struct {
 	serverHostURL    string
-    grpcServerHost   string
+	grpcServerHost   string
 	httpClient       *resty.Client
 	Logger           *zap.Logger
 	pollInterval     time.Duration
@@ -31,10 +32,9 @@ type Agent struct {
 	requestRateLimit int
 	publicKey        *rsa.PublicKey
 	agentIP          string
-    // gRPC
-    grpcInited bool
-    grpcConn   *grpc.ClientConn
-    grpcClient grpcClient
+	// gRPC
+	grpcConn   *grpc.ClientConn
+	grpcClient grpcClient
 }
 
 // New создает новый экземпляр агента с указанной конфигурацией.
@@ -57,7 +57,7 @@ func New(config *config.AgentConfig, logger *zap.Logger) *Agent {
 
 	return &Agent{
 		serverHostURL:    normalizeServerURL(config.ServerHost),
-        grpcServerHost:   config.GRPCServerHost,
+		grpcServerHost:   config.GRPCServerHost,
 		httpClient:       client,
 		Logger:           logger,
 		pollInterval:     time.Second * time.Duration(config.PollIntervalSeconds),
@@ -70,28 +70,34 @@ func New(config *config.AgentConfig, logger *zap.Logger) *Agent {
 }
 
 func (a *Agent) ensureGRPCConn(ctx context.Context) error {
-    if a.grpcConn != nil {
-        return nil
-    }
-    if a.grpcServerHost == "" {
-        return nil
-    }
-    // single shared connection
-    conn, err := grpc.DialContext(ctx, a.grpcServerHost, grpc.WithTransportCredentials(insecure.NewCredentials()))
-    if err != nil {
-        return err
-    }
-    a.grpcConn = conn
-    a.grpcClient = newGRPCClient(conn)
-    return nil
+	if a.grpcConn != nil {
+		return nil
+	}
+	if a.grpcServerHost == "" {
+		return nil
+	}
+
+	// Новый API с опциями
+	opts := []grpc.DialOption{
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	}
+
+	conn, err := grpc.NewClient(a.grpcServerHost, opts...)
+	if err != nil {
+		return fmt.Errorf("failed to create gRPC client: %w", err)
+	}
+
+	a.grpcConn = conn
+	a.grpcClient = newGRPCClient(conn)
+	return nil
 }
 
 func (a *Agent) closeGRPCConn() {
-    if a.grpcConn != nil {
-        _ = a.grpcConn.Close()
-        a.grpcConn = nil
-        a.grpcClient = nil
-    }
+	if a.grpcConn != nil {
+		_ = a.grpcConn.Close()
+		a.grpcConn = nil
+		a.grpcClient = nil
+	}
 }
 
 // normalizeServerURL добавляет протокол http:// к URL если он не указан
