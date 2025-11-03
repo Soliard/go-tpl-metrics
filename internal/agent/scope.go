@@ -10,9 +10,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Soliard/go-tpl-metrics/internal/compressor"
-	"github.com/Soliard/go-tpl-metrics/internal/crypto"
-	"github.com/Soliard/go-tpl-metrics/internal/signer"
 	"github.com/Soliard/go-tpl-metrics/models"
 	"go.uber.org/zap"
 	"golang.org/x/sync/semaphore"
@@ -21,6 +18,7 @@ import (
 // Run запускает агент для сбора и отправки метрик.
 // Создает горутины для сбора метрик и отправки данных с ограничением скорости.
 func (a *Agent) Run(ctx context.Context) {
+	defer a.closeGRPCConn()
 	jobs := make(chan []*models.Metrics, 10)
 	sem := semaphore.NewWeighted(int64(a.requestRateLimit))
 
@@ -117,36 +115,19 @@ func (a *Agent) reportMetricsBatch(metrics []*models.Metrics) error {
 	}
 	req := a.httpClient.R()
 
-	body, err := json.Marshal(metrics)
+	compBody, signB64, err := a.prepareJSONPayload(metrics)
 	if err != nil {
-		return fmt.Errorf("cant marshal metrics: %v", err)
+		return err
 	}
 
-	// Шифруем данные, если публичный ключ настроен
-	if a.hasCryptoKey() {
-		encryptedBody, err := crypto.EncryptHybrid(body, a.publicKey)
-		if err != nil {
-			return fmt.Errorf("cant encrypt data: %v", err)
-		}
-		body = encryptedBody
-		a.Logger.Info("metrics encrypted successfully")
-	}
-
-	compBody, err := compressor.CompressData(body)
-	if err != nil {
-		return fmt.Errorf("cant compress data: %v", err)
-	}
 	req.Header.Set("Content-type", "application/json")
 	req.Header.Set("Content-Encoding", "gzip")
-	// resty позаботится о асептинге gzip и о расшифровке тела ответа из gzip
 	req.Header.Set("Accept", "application/json")
 	if a.agentIP != "" {
 		req.Header.Set("X-Real-IP", a.agentIP)
 	}
-
-	if a.hasSignKey() {
-		signature := signer.Sign(compBody, a.signKey)
-		req.Header.Set("HashSHA256", signer.EncodeSign(signature))
+	if signB64 != "" {
+		req.Header.Set("HashSHA256", signB64)
 	}
 
 	req.SetBody(compBody)
@@ -177,24 +158,9 @@ func (a *Agent) sendMetricJSON(metric *models.Metrics) error {
 	}
 	req := a.httpClient.R()
 
-	buf, err := json.Marshal(metric)
+	compressed, signB64, err := a.prepareJSONPayload(metric)
 	if err != nil {
-		return fmt.Errorf("cant marshal metric: %v", err)
-	}
-
-	// Шифруем данные, если публичный ключ настроен
-	if a.hasCryptoKey() {
-		encryptedBuf, err := crypto.EncryptHybrid(buf, a.publicKey)
-		if err != nil {
-			return fmt.Errorf("cant encrypt data: %v", err)
-		}
-		buf = encryptedBuf
-		a.Logger.Info("metric encrypted successfully")
-	}
-
-	compressed, err := compressor.CompressData(buf)
-	if err != nil {
-		return fmt.Errorf("cant compress data: %v", err)
+		return fmt.Errorf("cant prepare body: %v", err)
 	}
 	req.Header.Set("Content-type", "application/json")
 	req.Header.Set("Content-Encoding", "gzip")
@@ -204,9 +170,8 @@ func (a *Agent) sendMetricJSON(metric *models.Metrics) error {
 		req.Header.Set("X-Real-IP", a.agentIP)
 	}
 
-	if a.hasSignKey() {
-		signature := signer.Sign(compressed, a.signKey)
-		req.Header.Set("HashSHA256", signer.EncodeSign(signature))
+	if signB64 != "" {
+		req.Header.Set("HashSHA256", signB64)
 	}
 
 	req.SetBody(compressed)

@@ -2,18 +2,13 @@ package agent
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"time"
 
-	"github.com/Soliard/go-tpl-metrics/internal/compressor"
-	"github.com/Soliard/go-tpl-metrics/internal/crypto"
 	agentpb "github.com/Soliard/go-tpl-metrics/internal/proto/agent"
-	"github.com/Soliard/go-tpl-metrics/internal/signer"
 	"github.com/Soliard/go-tpl-metrics/models"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
 	emptypb "google.golang.org/protobuf/types/known/emptypb"
 )
@@ -23,44 +18,28 @@ func (a *Agent) reportMetricsBatchGRPC(metrics []*models.Metrics) error {
 		return fmt.Errorf("grpc address not configured")
 	}
 
-	// marshal -> encrypt (if any) -> gzip -> sign over compressed bytes
-	buf, err := json.Marshal(metrics)
-	if err != nil {
-		return fmt.Errorf("cant marshal metrics: %v", err)
-	}
-	if a.hasCryptoKey() {
-		enc, err := crypto.EncryptHybrid(buf, a.publicKey)
-		if err != nil {
-			return fmt.Errorf("cant encrypt data: %v", err)
-		}
-		buf = enc
-		a.Logger.Info("metrics encrypted successfully")
-	}
-	comp, err := compressor.CompressData(buf)
-	if err != nil {
-		return fmt.Errorf("cant compress data: %v", err)
-	}
-
-	// dial per call (простота). Можно оптимизировать позже до реюза соединения
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-	conn, err := grpc.DialContext(ctx, a.grpcServerHost, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	// подготовка полезной нагрузки (общая)
+	comp, signB64, err := a.prepareJSONPayload(metrics)
 	if err != nil {
 		return err
 	}
-	defer conn.Close()
 
-	client := newGRPCClient(conn)
+	// ensure shared connection and client
+	if err := a.ensureGRPCConn(context.Background()); err != nil {
+		return err
+	}
+	client := a.grpcClient
 
 	// metadata: signature and x-real-ip
 	md := metadata.New(nil)
 	if a.agentIP != "" {
 		md.Set("x-real-ip", a.agentIP)
 	}
-	if a.hasSignKey() {
-		sig := signer.Sign(comp, a.signKey)
-		md.Set("HashSHA256", signer.EncodeSign(sig))
+	if signB64 != "" {
+		md.Set("HashSHA256", signB64)
 	}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
 	ctx = metadata.NewOutgoingContext(ctx, md)
 
 	_, err = client.Updates(ctx, &agentpb.BatchBytes{Payload: comp})
