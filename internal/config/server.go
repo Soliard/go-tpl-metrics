@@ -11,6 +11,7 @@ import (
 // ServerConfig содержит все настройки сервера метрик
 type ServerConfig struct {
 	ServerHost           string `env:"ADDRESS" json:"address"`               // адрес сервера
+	GRPCServerHost       string `env:"GRPC_ADDRESS" json:"grpc_address"`     // адрес gRPC сервера
 	LogLevel             string `env:"LOG_LEVEL" json:"log_level"`           // уровень логирования
 	StoreIntervalSeconds int    `env:"STORE_INTERVAL" json:"store_interval"` // интервал сохранения
 	FileStoragePath      string `env:"FILE_STORAGE_PATH" json:"store_file"`  // путь к файлу хранилища
@@ -24,6 +25,7 @@ type ServerConfig struct {
 // ServerJSONConfig представляет структуру JSON конфигурации для сервера
 type ServerJSONConfig struct {
 	Address       string `json:"address"`        // аналог переменной окружения ADDRESS или флага -a
+	GRPCAddress   string `json:"grpc_address"`   // адрес gRPC сервера
 	Restore       bool   `json:"restore"`        // аналог переменной окружения RESTORE или флага -r
 	StoreInterval string `json:"store_interval"` // аналог переменной окружения STORE_INTERVAL или флага -i
 	StoreFile     string `json:"store_file"`     // аналог переменной окружения STORE_FILE или -f
@@ -81,6 +83,7 @@ func loadServerFromJSON(config *ServerConfig, reader *ConfigFileReader, filePath
 
 	// Применяем значения из JSON
 	config.ServerHost = jsonConfig.Address
+	config.GRPCServerHost = jsonConfig.GRPCAddress
 	config.IsRestoreFromFile = jsonConfig.Restore
 	config.FileStoragePath = jsonConfig.StoreFile
 	config.DatabaseDSN = jsonConfig.DatabaseDSN
@@ -104,6 +107,7 @@ func parseServerFlags(config *ServerConfig) error {
 	fs := flag.NewFlagSet("server", flag.ContinueOnError)
 
 	fs.StringVar(&config.ServerHost, "a", config.ServerHost, "server address")
+	fs.StringVar(&config.GRPCServerHost, "ga", config.GRPCServerHost, "grpc server address")
 	fs.StringVar(&config.LogLevel, "l", config.LogLevel, "log level")
 	fs.IntVar(&config.StoreIntervalSeconds, "i", config.StoreIntervalSeconds, "store data interval in seconds")
 	fs.StringVar(&config.FileStoragePath, "f", config.FileStoragePath, "file storage name")

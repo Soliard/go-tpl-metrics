@@ -19,6 +19,7 @@ import (
 // Собирает метрики с заданными интервалами и отправляет их на сервер.
 type Agent struct {
 	serverHostURL    string
+    grpcServerHost   string
 	httpClient       *resty.Client
 	Logger           *zap.Logger
 	pollInterval     time.Duration
@@ -27,6 +28,8 @@ type Agent struct {
 	requestRateLimit int
 	publicKey        *rsa.PublicKey
 	agentIP          string
+    // gRPC
+    grpcInited bool
 }
 
 // New создает новый экземпляр агента с указанной конфигурацией.
@@ -49,6 +52,7 @@ func New(config *config.AgentConfig, logger *zap.Logger) *Agent {
 
 	return &Agent{
 		serverHostURL:    normalizeServerURL(config.ServerHost),
+        grpcServerHost:   config.GRPCServerHost,
 		httpClient:       client,
 		Logger:           logger,
 		pollInterval:     time.Second * time.Duration(config.PollIntervalSeconds),

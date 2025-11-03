@@ -107,6 +107,10 @@ func (a *Agent) StartSender(ctx context.Context, jobs <-chan []*models.Metrics, 
 }
 
 func (a *Agent) reportMetricsBatch(metrics []*models.Metrics) error {
+	if a.grpcServerHost != "" {
+		return a.reportMetricsBatchGRPC(metrics)
+	}
+
 	url, err := url.JoinPath(a.serverHostURL, "updates")
 	if err != nil {
 		return err

@@ -1,6 +1,7 @@
 {
-    "address": "localhost:8080", 
-    "report_interval": "5s", 
-    "poll_interval": "1s", 
-    "crypto_key": "" 
+    "address": "localhost:8080",
+    "grpc_address": "localhost:8081",
+    "report_interval": "5s",
+    "poll_interval": "1s",
+    "crypto_key": ""
 }

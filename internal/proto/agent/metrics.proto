@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package metrics;
+
+import "google/protobuf/empty.proto";
+
+option go_package = "github.com/Soliard/go-tpl-metrics/internal/proto/agent;agentpb";
+
+message BatchBytes {
+  bytes payload = 1;
+}
+
+service Metrics {
+  rpc Updates(BatchBytes) returns (google.protobuf.Empty);
+}
+
+
