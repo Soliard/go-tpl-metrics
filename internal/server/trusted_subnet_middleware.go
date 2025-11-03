@@ -4,6 +4,7 @@ import (
 	"net"
 	"net/http"
 
+	"github.com/Soliard/go-tpl-metrics/internal/netutil"
 	"go.uber.org/zap"
 )
 
@@ -24,14 +25,9 @@ func TrustedSubnetMiddleware(cidr string, logger *zap.Logger) func(http.Handler)
 			return next
 		}
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			realIP := r.Header.Get("X-Real-IP")
-			if realIP == "" {
-				http.Error(w, "forbidden: missing X-Real-IP", http.StatusForbidden)
-				return
-			}
-			ip := net.ParseIP(realIP)
+			ip := netutil.ExtractIPFromHTTPRequest(r)
 			if ip == nil {
-				http.Error(w, "forbidden: invalid X-Real-IP", http.StatusForbidden)
+				http.Error(w, "forbidden: missing or invalid X-Real-IP", http.StatusForbidden)
 				return
 			}
 			if !ipnet.Contains(ip) {
