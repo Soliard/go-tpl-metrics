@@ -4,7 +4,7 @@ package metrics;
 
 import "google/protobuf/empty.proto";
 
-option go_package = "github.com/Soliard/go-tpl-metrics/internal/proto/server;serverpb";
+option go_package = "github.com/Soliard/go-tpl-metrics/internal/proto;metricspb";
 
 message BatchBytes {
   bytes payload = 1;
@@ -13,5 +13,3 @@ message BatchBytes {
 service Metrics {
   rpc Updates(BatchBytes) returns (google.protobuf.Empty);
 }
-
-

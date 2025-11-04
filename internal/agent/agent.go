@@ -8,10 +8,12 @@ import (
 	"fmt"
 	"net"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/Soliard/go-tpl-metrics/internal/config"
 	"github.com/Soliard/go-tpl-metrics/internal/crypto"
+	metricspb "github.com/Soliard/go-tpl-metrics/internal/proto"
 	"github.com/Soliard/go-tpl-metrics/internal/signer"
 	"github.com/go-resty/resty/v2"
 	"go.uber.org/zap"
@@ -34,7 +36,8 @@ type Agent struct {
 	agentIP          string
 	// gRPC
 	grpcConn   *grpc.ClientConn
-	grpcClient grpcClient
+	grpcClient metricspb.MetricsClient
+	grpcOnce   sync.Once
 }
 
 // New создает новый экземпляр агента с указанной конфигурацией.
@@ -70,26 +73,27 @@ func New(config *config.AgentConfig, logger *zap.Logger) *Agent {
 }
 
 func (a *Agent) ensureGRPCConn(ctx context.Context) error {
-	if a.grpcConn != nil {
-		return nil
-	}
-	if a.grpcServerHost == "" {
-		return nil
-	}
+	var err error
+	a.grpcOnce.Do(func() {
+		if a.grpcServerHost == "" {
+			return
+		}
 
-	// Новый API с опциями
-	opts := []grpc.DialOption{
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	}
+		// Новый API с опциями
+		opts := []grpc.DialOption{
+			grpc.WithTransportCredentials(insecure.NewCredentials()),
+		}
 
-	conn, err := grpc.NewClient(a.grpcServerHost, opts...)
-	if err != nil {
-		return fmt.Errorf("failed to create gRPC client: %w", err)
-	}
+		conn, connErr := grpc.NewClient(a.grpcServerHost, opts...)
+		if connErr != nil {
+			err = fmt.Errorf("failed to create gRPC client: %w", connErr)
+			return
+		}
 
-	a.grpcConn = conn
-	a.grpcClient = newGRPCClient(conn)
-	return nil
+		a.grpcConn = conn
+		a.grpcClient = metricspb.NewMetricsClient(conn)
+	})
+	return err
 }
 
 func (a *Agent) closeGRPCConn() {

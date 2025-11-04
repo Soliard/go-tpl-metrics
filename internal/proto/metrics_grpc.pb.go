@@ -2,9 +2,9 @@
 // versions:
 // - protoc-gen-go-grpc v1.5.1
 // - protoc             v6.33.0
-// source: internal/proto/agent/metrics.proto
+// source: internal/proto/metrics.proto
 
-package agentpb
+package metricspb
 
 import (
 	context "context"
@@ -118,5 +118,5 @@ var Metrics_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "internal/proto/agent/metrics.proto",
+	Metadata: "internal/proto/metrics.proto",
 }

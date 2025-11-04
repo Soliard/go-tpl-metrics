@@ -5,12 +5,10 @@ import (
 	"fmt"
 	"time"
 
-	agentpb "github.com/Soliard/go-tpl-metrics/internal/proto/agent"
+	metricspb "github.com/Soliard/go-tpl-metrics/internal/proto"
 	"github.com/Soliard/go-tpl-metrics/models"
 	"go.uber.org/zap"
-	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
-	emptypb "google.golang.org/protobuf/types/known/emptypb"
 )
 
 func (a *Agent) reportMetricsBatchGRPC(metrics []*models.Metrics) error {
@@ -42,31 +40,10 @@ func (a *Agent) reportMetricsBatchGRPC(metrics []*models.Metrics) error {
 	defer cancel()
 	ctx = metadata.NewOutgoingContext(ctx, md)
 
-	_, err = client.Updates(ctx, &agentpb.BatchBytes{Payload: comp})
+	_, err = client.Updates(ctx, &metricspb.BatchBytes{Payload: comp})
 	if err != nil {
 		a.Logger.Error("grpc Updates failed", zap.Error(err))
 		return err
 	}
 	return nil
-}
-
-type grpcClient interface {
-	Updates(ctx context.Context, in *agentpb.BatchBytes, opts ...grpc.CallOption) (*emptypb.Empty, error)
-}
-
-func newGRPCClient(cc grpc.ClientConnInterface) grpcClient {
-	return &metricsClient{cc}
-}
-
-type metricsClient struct {
-	cc grpc.ClientConnInterface
-}
-
-func (c *metricsClient) Updates(ctx context.Context, in *agentpb.BatchBytes, opts ...grpc.CallOption) (*emptypb.Empty, error) {
-	out := new(emptypb.Empty)
-	err := c.cc.Invoke(ctx, "/metrics.Metrics/Updates", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
 }
