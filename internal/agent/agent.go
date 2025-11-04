@@ -5,12 +5,14 @@ package agent
 import (
 	"context"
 	"crypto/rsa"
+	"encoding/json"
 	"fmt"
 	"net"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/Soliard/go-tpl-metrics/internal/compressor"
 	"github.com/Soliard/go-tpl-metrics/internal/config"
 	"github.com/Soliard/go-tpl-metrics/internal/crypto"
 	metricspb "github.com/Soliard/go-tpl-metrics/internal/proto"
@@ -43,9 +45,13 @@ type Agent struct {
 // New создает новый экземпляр агента с указанной конфигурацией.
 // Настраивает HTTP клиент с повторными попытками и нормализует URL сервера.
 func New(config *config.AgentConfig, logger *zap.Logger) *Agent {
-	client := resty.New().
-		SetRetryCount(3).
-		SetRetryMaxWaitTime(2)
+	// Инициализируем HTTP клиент только если HTTP адрес задан
+	var client *resty.Client
+	if config.ServerHost != "" {
+		client = resty.New().
+			SetRetryCount(3).
+			SetRetryMaxWaitTime(2)
+	}
 
 	// Загружаем публичный ключ для шифрования
 	var publicKey *rsa.PublicKey
@@ -136,4 +142,32 @@ func detectOutboundIP() string {
 		return ""
 	}
 	return udpAddr.IP.String()
+}
+
+// prepareJSONPayload подготавливает тело запроса:
+// json.Marshal -> EncryptHybrid (если ключ есть) -> gzip.
+// Возвращает сжатый буфер и подпись (по сжатому буферу) в base64, если есть signKey.
+func (a *Agent) prepareJSONPayload(v any) (compressed []byte, signatureB64 string, err error) {
+	buf, err := json.Marshal(v)
+	if err != nil {
+		return nil, "", fmt.Errorf("cant marshal payload: %v", err)
+	}
+	if a.hasCryptoKey() {
+		enc, err := crypto.EncryptHybrid(buf, a.publicKey)
+		if err != nil {
+			return nil, "", fmt.Errorf("cant encrypt data: %v", err)
+		}
+		buf = enc
+		a.Logger.Info("payload encrypted successfully")
+	}
+	comp, err := compressor.CompressData(buf)
+	if err != nil {
+		return nil, "", fmt.Errorf("cant compress data: %v", err)
+	}
+	var signB64 string
+	if a.hasSignKey() {
+		sig := signer.Sign(comp, a.signKey)
+		signB64 = signer.EncodeSign(sig)
+	}
+	return comp, signB64, nil
 }
