@@ -28,7 +28,10 @@ func MetricRouter(s *MetricsService) chi.Router {
 			r.Get("/{type}/{name}", s.ValueViaURLHandler)
 		})
 		r.Route("/update", func(r chi.Router) {
-			r.Use(crypto.DecryptMiddleware(s.privateKey, s.Logger))
+			r.Use(
+				TrustedSubnetMiddleware(s.trustedSubnet, s.Logger),
+				crypto.DecryptMiddleware(s.privateKey, s.Logger),
+			)
 			r.Post("/", s.UpdateHandler)
 			r.Post("/{type}", func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusNotFound) })
 			r.Post("/{type}/{name}", func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusBadRequest) })
@@ -39,6 +42,7 @@ func MetricRouter(s *MetricsService) chi.Router {
 	// эндпоинты с подписью
 	r.Group(func(r chi.Router) {
 		r.Use(
+			TrustedSubnetMiddleware(s.trustedSubnet, s.Logger),
 			signer.VerifySignatureMiddleware(s.signKey, s.Logger),
 			signer.SignResponseMiddleware(s.signKey, s.Logger),
 			compressor.GzipMiddleware(s.Logger),

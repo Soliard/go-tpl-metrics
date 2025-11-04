@@ -1,8 +1,10 @@
 {
-    "address": "localhost:8080", 
-    "restore": false, 
+    "address": "localhost:8080",
+    "grpc_address": "localhost:8081",
+    "restore": false,
     "store_interval": "5s",
-    "store_file": "", 
+    "store_file": "",
     "database_dsn": "postgres://postgres:postgres@localhost:5432/gotplmetrics?sslmode=disable",
-    "crypto_key": "C:/Users/solia/Desktop/repo/go-tpl-metrics/cmd/server/config/private_key.pem" 
-} 
+    "crypto_key": "",
+    "trusted_subnet": ""
+}
