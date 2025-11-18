@@ -22,11 +22,12 @@ import (
 // MetricsService представляет основной сервис для работы с метриками.
 // Обеспечивает HTTP API для обновления и получения метрик с поддержкой повторных попыток.
 type MetricsService struct {
-	ServerHost string
-	storage    store.Storage
-	Logger     *zap.Logger
-	signKey    []byte
-	privateKey *rsa.PrivateKey // Новое поле
+	ServerHost    string
+	storage       store.Storage
+	Logger        *zap.Logger
+	signKey       []byte
+	privateKey    *rsa.PrivateKey // Новое поле
+	trustedSubnet string
 }
 
 var maxRetries = 3
@@ -43,11 +44,12 @@ func NewMetricsService(storage store.Storage, config *config.ServerConfig, logge
 		}
 	}
 	return &MetricsService{
-		storage:    storage,
-		ServerHost: config.ServerHost,
-		Logger:     logger,
-		signKey:    []byte(config.SignKey),
-		privateKey: privateKey,
+		storage:       storage,
+		ServerHost:    config.ServerHost,
+		Logger:        logger,
+		signKey:       []byte(config.SignKey),
+		privateKey:    privateKey,
+		trustedSubnet: config.TrustedSubnet,
 	}
 }
 

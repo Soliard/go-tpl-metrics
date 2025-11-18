@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+    "net"
 	"os"
 	"os/signal"
 	"syscall"
@@ -17,6 +18,7 @@ import (
 	"github.com/Soliard/go-tpl-metrics/internal/server"
 	"github.com/Soliard/go-tpl-metrics/internal/store"
 	"go.uber.org/zap"
+    "google.golang.org/grpc"
 )
 
 // Глобальные переменные для информации о сборке
@@ -56,30 +58,63 @@ func main() {
 	fmt.Println("storage type: ", storage)
 
 	service := server.NewMetricsService(storage, config, logger)
-	metricRouter := server.MetricRouter(service)
+    // HTTP сервер (если адрес задан)
+    var httpSrv *http.Server
+    if config.ServerHost != "" {
+        metricRouter := server.MetricRouter(service)
+        httpSrv = &http.Server{
+            Addr:    service.ServerHost,
+            Handler: metricRouter,
+        }
+    }
 
-	srv := &http.Server{
-		Addr:    service.ServerHost,
-		Handler: metricRouter,
-	}
+    // gRPC сервер (если адрес задан)
+    var grpcSrv *grpc.Server
+    var grpcLis net.Listener
+    if config.GRPCServerHost != "" {
+        grpcSrv = server.NewGRPCServer(service)
+        var err error
+        grpcLis, err = net.Listen("tcp", config.GRPCServerHost)
+        if err != nil {
+            logger.Fatal("failed to listen grpc", zap.Error(err))
+        }
+    }
+
+    if httpSrv == nil && grpcSrv == nil {
+        logger.Fatal("no server address provided: set address and/or grpc_address")
+    }
 
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 
-	go func() {
-		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			logger.Fatal("fatal error while server serving", zap.Error(err))
-		}
-	}()
+    if httpSrv != nil {
+        go func() {
+            if err := httpSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+                logger.Fatal("fatal error while http serving", zap.Error(err))
+            }
+        }()
+    }
+    if grpcSrv != nil {
+        go func() {
+            if err := grpcSrv.Serve(grpcLis); err != nil {
+                logger.Fatal("fatal error while grpc serving", zap.Error(err))
+            }
+        }()
+    }
 
 	<-sigCh
 	logger.Info("shutdown signal received, stopping server...")
 
-	shCtx, shCancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer shCancel()
-	if err := srv.Shutdown(shCtx); err != nil {
-		logger.Error("HTTP server Shutdown", zap.Error(err))
-	}
+    shCtx, shCancel := context.WithTimeout(context.Background(), 10*time.Second)
+    defer shCancel()
+    if httpSrv != nil {
+        if err := httpSrv.Shutdown(shCtx); err != nil {
+            logger.Error("HTTP server Shutdown", zap.Error(err))
+        }
+    }
+    if grpcSrv != nil {
+        grpcSrv.GracefulStop()
+    }
 
 	appCancel()
 

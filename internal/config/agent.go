@@ -11,6 +11,7 @@ import (
 // AgentConfig предоставляет конфигурацию для агента метрик
 type AgentConfig struct {
 	ServerHost            string `env:"ADDRESS" json:"address"`                 // адрес сервера
+    GRPCServerHost        string `env:"GRPC_ADDRESS" json:"grpc_address"`       // адрес gRPC сервера
 	PollIntervalSeconds   int    `env:"POLL_INTERVAL" json:"poll_interval"`     // интервал сбора метрик
 	ReportIntervalSeconds int    `env:"REPORT_INTERVAL" json:"report_interval"` // интервал отправки метрик
 	LogLevel              string `env:"LOG_LEVEL" json:"log_level"`             // уровень логирования
@@ -22,9 +23,28 @@ type AgentConfig struct {
 // AgentJSONConfig представляет структуру JSON конфигурации для агента
 type AgentJSONConfig struct {
 	Address        string `json:"address"`         // аналог переменной окружения ADDRESS или флага -a
+    GRPCAddress    string `json:"grpc_address"`    // адрес gRPC сервера
 	ReportInterval string `json:"report_interval"` // аналог переменной окружения REPORT_INTERVAL или флага -r
 	PollInterval   string `json:"poll_interval"`   // аналог переменной окружения POLL_INTERVAL или флага -p
 	CryptoKey      string `json:"crypto_key"`      // аналог переменной окружения CRYPTO_KEY или флага -crypto-key
+}
+
+func fillAgentDefaults(c *AgentConfig) {
+	if c.ServerHost == "" {
+		c.ServerHost = "localhost:8080"
+	}
+	if c.PollIntervalSeconds < 1 {
+		c.PollIntervalSeconds = 2
+	}
+	if c.ReportIntervalSeconds < 1 {
+		c.ReportIntervalSeconds = 10
+	}
+	if c.LogLevel == "" {
+		c.LogLevel = "warn"
+	}
+	if c.RequestsLimit == 0 {
+		c.RequestsLimit = 100
+	}
 }
 
 // NewAgentConfig создает новую конфигурацию агента.
@@ -50,6 +70,8 @@ func NewAgentConfig() (*AgentConfig, error) {
 		return nil, err
 	}
 
+	fillAgentDefaults(config)
+
 	return config, nil
 }
 
@@ -62,6 +84,7 @@ func loadAgentFromJSON(config *AgentConfig, reader *ConfigFileReader, filePath s
 
 	// Применяем значения из JSON
 	config.ServerHost = jsonConfig.Address
+    config.GRPCServerHost = jsonConfig.GRPCAddress
 	config.CryptoKey = jsonConfig.CryptoKey
 
 	// Парсим интервалы из строк в секунды
@@ -89,11 +112,12 @@ func parseAgentFlags(config *AgentConfig) error {
 	fs := flag.NewFlagSet("agent", flag.ContinueOnError)
 
 	fs.StringVar(&config.ServerHost, "a", config.ServerHost, "server address")
+    fs.StringVar(&config.GRPCServerHost, "ga", config.GRPCServerHost, "grpc server address")
 	fs.IntVar(&config.PollIntervalSeconds, "p", config.PollIntervalSeconds, "metrics poll interval in seconds")
 	fs.IntVar(&config.ReportIntervalSeconds, "r", config.ReportIntervalSeconds, "metrics send interval in seconds")
-	fs.StringVar(&config.LogLevel, "ll", "warn", "log level")
-	fs.StringVar(&config.SignKey, "k", "", "key will be used for signing data from agent")
-	fs.IntVar(&config.RequestsLimit, "l", 100, "server request rate limit")
+	fs.StringVar(&config.LogLevel, "ll", config.LogLevel, "log level")
+	fs.StringVar(&config.SignKey, "k", config.SignKey, "key will be used for signing data from agent")
+	fs.IntVar(&config.RequestsLimit, "l", config.RequestsLimit, "server request rate limit")
 	fs.StringVar(&config.CryptoKey, "crypto-key", config.CryptoKey, "path to public PEM key for encryption")
 
 	err := fs.Parse(os.Args[1:])
